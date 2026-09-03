@@ -13,22 +13,27 @@
 </head>
 <body>
   <h2>แดชบอร์ดสถิติ</h2>
-  <div id="stats-container" class="card">กำลังโหลดข้อมูล...</div>
+  <div id="stats-container" class="card">กำลังโหลดข้อมูลจาก LINE...</div>
 
   <script>
-    async function initLiffAndFetchData() {
+    window.onload = async function() {
       try {
-        // แทนที่ด้วย LIFF ID ของคุณ
+        // 1. เริ่มต้น LIFF SDK
         await liff.init({ liffId: "2011350023-6ASKwrct" });
+        
+        // 2. เช็กว่าเปิดในแอป LINE หรือไม่ ถ้าไม่ได้ล็อกอินให้ล็อกอินก่อน
         if (!liff.isLoggedIn()) {
           liff.login();
           return;
         }
         
+        // 3. ดึง Profile ของผู้ใช้
         const profile = await liff.getProfile();
         const userId = profile.userId;
 
-        // เรียกใช้งาน Webhook ของ n8n ที่คุณสร้างไว้
+        document.getElementById('stats-container').innerText = 'กำลังดึงข้อมูลสถิติ...';
+
+        // 4. ยิง Fetch ไปหา n8n / ngrok
         const response = await fetch(`https://starless-karma-willing.ngrok-free.dev/webhook/liff-dashboard-data?userId=${userId}`);
         const result = await response.json();
 
@@ -43,11 +48,10 @@
           document.getElementById('stats-container').innerText = 'ไม่พบข้อมูลสถิติของคุณ';
         }
       } catch (err) {
-        console.error(err);
-        document.getElementById('stats-container').innerText = 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ';
+        console.error("LIFF Error:", err);
+        document.getElementById('stats-container').innerText = 'เกิดข้อผิดพลาด: ' + err.message;
       }
-    }
-    initLiffAndFetchData();
+    };
   </script>
 </body>
 </html>
