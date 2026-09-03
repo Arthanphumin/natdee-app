@@ -29,7 +29,7 @@
         const userId = profile.userId;
 
         // เรียกใช้งาน Webhook ของ n8n ที่คุณสร้างไว้
-        const response = await fetch(`https://your-n8n-webhook-url/liff-dashboard-data?userId=${userId}`);
+        const response = await fetch(`https://starless-karma-willing.ngrok-free.dev/webhook/liff-dashboard-data?userId=${userId}`);
         const result = await response.json();
 
         if (result.status === "success") {
