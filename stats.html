@@ -1,1 +1,53 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สถิติของฉัน - LINE LIFF</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; background: #f4f6f8; margin: 0; padding: 20px; color: #333; }
+    .card { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; }
+    h2 { margin-top: 0; color: #06C755; }
+  </style>
+</head>
+<body>
+  <h2>แดชบอร์ดสถิติ</h2>
+  <div id="stats-container" class="card">กำลังโหลดข้อมูล...</div>
 
+  <script>
+    async function initLiffAndFetchData() {
+      try {
+        // แทนที่ด้วย LIFF ID ของคุณ
+        await liff.init({ liffId: "YOUR_LIFF_ID" });
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        
+        const profile = await liff.getProfile();
+        const userId = profile.userId;
+
+        // เรียกใช้งาน Webhook ของ n8n ที่คุณสร้างไว้
+        const response = await fetch(`https://your-n8n-webhook-url/liff-dashboard-data?userId=${userId}`);
+        const result = await response.json();
+
+        if (result.status === "success") {
+          const d = result.data;
+          document.getElementById('stats-container').innerHTML = `
+            <p><b>ยอดนัดหมายทั้งหมด:</b> ${d.totalAppointments}</p>
+            <p><b>งานที่เสร็จสิ้น:</b> ${d.completedJobs}</p>
+            <p><b>รายได้รวม:</b> ${d.revenue} บาท</p>
+          `;
+        } else {
+          document.getElementById('stats-container').innerText = 'ไม่พบข้อมูลสถิติของคุณ';
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById('stats-container').innerText = 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ';
+      }
+    }
+    initLiffAndFetchData();
+  </script>
+</body>
+</html>
