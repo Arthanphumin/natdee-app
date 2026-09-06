@@ -5,65 +5,129 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>หน้าแรก - ระบบบริการ</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
   <style>
+    * {
+      box-sizing: border-box;
+    }
+  
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f4f6f8;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #f0f2f5;
       margin: 0;
-      padding: 20px;
+      padding: 16px;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      color: #333;
+      min-height: 100dvh;
+      color: #1f2937;
     }
+  
     .container {
-      background: #fff;
-      padding: 30px 20px;
-      border-radius: 15px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      background: #ffffff;
+      padding: 28px 20px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
       text-align: center;
       width: 100%;
-      max-width: 350px;
+      max-width: 380px;
     }
+  
     h2 {
-      margin-top: 0;
+      margin: 0 0 8px 0;
       color: #06C755;
+      font-size: 22px;
+      font-weight: 700;
     }
+  
     p {
-      color: #666;
+      color: #6b7280;
       font-size: 14px;
-      margin-bottom: 25px;
+      margin: 0 0 20px 0;
+      line-height: 1.5;
     }
+  
+    /* แดชบอร์ดการ์ดสถิติ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+  
+    .stat-card {
+      background: #f9fafb;
+      border: 1px solid #f3f4f6;
+      border-radius: 14px;
+      padding: 14px 12px;
+      text-align: left;
+      border-left: 4px solid #06C755;
+      transition: transform 0.15s ease;
+    }
+  
+    .stat-card:active {
+      transform: scale(0.98);
+    }
+  
+    .stat-card.total { border-left-color: #3b82f6; }
+    .stat-card.done { border-left-color: #10b981; }
+    .stat-card.upcoming { border-left-color: #f59e0b; }
+    .stat-card.overdue { border-left-color: #ef4444; }
+  
+    .stat-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+  
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+    }
+  
+    /* ปุ่มกด */
     .btn {
-      display: block;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       width: 100%;
-      padding: 12px;
-      margin-bottom: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
       border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: bold;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
       cursor: pointer;
       text-decoration: none;
-      box-sizing: border-box;
-      transition: background 0.2s;
+      transition: all 0.2s ease;
     }
+  
+    .btn:active {
+      transform: scale(0.98);
+    }
+  
     .btn-primary {
       background-color: #06C755;
-      color: white;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(6, 199, 85, 0.25);
     }
+  
     .btn-primary:hover {
       background-color: #05b34c;
     }
+  
     .btn-secondary {
-      background-color: #e4e6eb;
-      color: #333;
+      background-color: #f3f4f6;
+      color: #374151;
     }
+  
     .btn-secondary:hover {
-      background-color: #d8dadf;
+      background-color: #e5e7eb;
     }
   </style>
+  
 </head>
 <body>
 
