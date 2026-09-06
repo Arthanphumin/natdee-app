@@ -42,7 +42,7 @@
     .stat-title { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
     .stat-value { font-size: 26px; font-weight: 800; color: #0f172a; }
 
-    /* กล่องกราฟ & สัดส่วน */
+    /* กล่องข้อมูลและกราฟ */
     .section-card {
       background: #ffffff;
       border-radius: 16px;
@@ -61,7 +61,7 @@
     }
     .chart-container {
       position: relative;
-      height: 200px;
+      height: 180px;
       width: 100%;
     }
 
@@ -88,7 +88,7 @@
       line-height: 1.55;
     }
 
-    /* รายการหมวดหมู่ */
+    /* แถบหมวดหมู่ */
     .cat-item { margin-bottom: 10px; }
     .cat-item:last-child { margin-bottom: 0; }
     .cat-header {
@@ -143,7 +143,7 @@
   </div>
 
   <div id="content-container">
-    <div class="loading-box">🔄 กำลังวิเคราะห์ข้อมูลสถิติ...</div>
+    <div class="loading-box">🔄 กำลังโหลดข้อมูลสถิติ...</div>
   </div>
 
   <button class="btn-refresh" onclick="fetchData()">🔄 รีเฟรชข้อมูล</button>
@@ -176,13 +176,14 @@
         const d = res.data || res;
         const s = d.summary || { total: 0, done: 0, upcoming: 0, cancelled: 0 };
         const categories = d.categories || {};
-        const traffic = d.traffic || { labels: [], counts: [] };
+        const traffic = d.traffic || { labels: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'], counts: [0,0,0,0,0,0,0] };
 
-        // สร้างแถบแสดงหมวดหมู่
+        // สร้าง HTML หมวดหมู่
         let catHtml = '';
-        if (Object.keys(categories).length > 0) {
+        const catKeys = Object.keys(categories);
+        if (s.total > 0 && catKeys.length > 0) {
           for (const [catName, count] of Object.entries(categories)) {
-            const pct = s.total > 0 ? Math.round((count / s.total) * 100) : 0;
+            const pct = Math.round((count / s.total) * 100);
             catHtml += `
               <div class="cat-item">
                 <div class="cat-header">
@@ -196,7 +197,7 @@
             `;
           }
         } else {
-          catHtml = '<div style="color:#94a3b8; font-size:13px;">ยังไม่มีข้อมูลหมวดหมู่</div>';
+          catHtml = '<div style="color:#94a3b8; font-size:13px; text-align:center; padding: 10px 0;">ไม่มีข้อมูลหมวดหมู่</div>';
         }
 
         container.innerHTML = `
@@ -228,7 +229,7 @@
 
           <div class="insight-card">
             <div class="insight-header">💡 ข้อคิดเห็น & สรุปภาพรวม</div>
-            <div class="insight-body">${d.advice || 'ไม่มีคำแนะนำ'}</div>
+            <div class="insight-body">${d.advice || 'ไม่มีข้อมูลคำแนะนำ'}</div>
           </div>
 
           <div class="section-card">
@@ -248,7 +249,7 @@
               data: traffic.counts,
               backgroundColor: '#06C755',
               borderRadius: 6,
-              maxBarThickness: 28
+              maxBarThickness: 26
             }]
           },
           options: {
@@ -256,7 +257,11 @@
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-              y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+              y: {
+                beginAtZero: true,
+                suggestedMax: 3,
+                ticks: { stepSize: 1, precision: 0 }
+              },
               x: { grid: { display: false } }
             }
           }
