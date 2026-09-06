@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>สถิติของฉัน - LINE LIFF</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <!-- Chart.js สำหรับทำกราฟแท่งมืออาชีพ -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     * { box-sizing: border-box; }
@@ -43,7 +42,7 @@
     .stat-title { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
     .stat-value { font-size: 26px; font-weight: 800; color: #0f172a; }
 
-    /* กล่องกราฟ & กล่องข้อมูล */
+    /* กล่องกราฟ & สัดส่วน */
     .section-card {
       background: #ffffff;
       border-radius: 16px;
@@ -89,7 +88,7 @@
       line-height: 1.55;
     }
 
-    /* แถบหมวดหมู่ */
+    /* รายการหมวดหมู่ */
     .cat-item { margin-bottom: 10px; }
     .cat-item:last-child { margin-bottom: 0; }
     .cat-header {
@@ -140,11 +139,11 @@
 
   <div class="header">
     <h2>แดชบอร์ดสถิติ</h2>
-    <p class="subtitle">ภาพรวมและวิเคราะห์ตารางนัดหมายของคุณ</p>
+    <p class="subtitle">ภาพรวมและบทวิเคราะห์ตารางนัดหมายของคุณ</p>
   </div>
 
   <div id="content-container">
-    <div class="loading-box">🔄 กำลังโหลดข้อมูลสถิติ...</div>
+    <div class="loading-box">🔄 กำลังวิเคราะห์ข้อมูลสถิติ...</div>
   </div>
 
   <button class="btn-refresh" onclick="fetchData()">🔄 รีเฟรชข้อมูล</button>
@@ -173,64 +172,17 @@
           throw new Error('เซิร์ฟเวอร์ตอบกลับสถานะ ' + response.status);
         }
 
-        const resData = await response.json();
-        
-        let list = [];
-        if (Array.isArray(resData)) {
-          list = resData;
-        } else if (resData.data && Array.isArray(resData.data)) {
-          list = resData.data;
-        } else if (typeof resData === 'object' && Object.keys(resData).length > 0) {
-          list = [resData];
-        }
+        const res = await response.json();
+        const d = res.data || res;
+        const s = d.summary || { total: 0, done: 0, upcoming: 0, cancelled: 0 };
+        const categories = d.categories || {};
+        const traffic = d.traffic || { labels: [], counts: [] };
 
-        let total = list.length;
-        let done = 0, upcoming = 0, cancelled = 0;
-        let categories = {};
-        
-        // แทรฟฟิกวันในสัปดาห์ (จันทร์ - อาทิตย์)
-        const dayLabels = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
-        const dayCounts = [0, 0, 0, 0, 0, 0, 0];
-        const now = new Date();
-
-        list.forEach(item => {
-          const row = item.json || item;
-          const st = (row.status || '').toLowerCase().trim();
-          const dt = row.datetime ? new Date(row.datetime) : null;
-
-          if (st === 'done') {
-            done++;
-          } else if (st === 'cancelled' || st === 'ยกเลิก' || (dt && dt < now)) {
-            cancelled++;
-          } else {
-            upcoming++;
-          }
-
-          const cat = row.category || 'ทั่วไป';
-          categories[cat] = (categories[cat] || 0) + 1;
-
-          if (dt && !isNaN(dt.getTime())) {
-            let dayIdx = dt.getDay() - 1; 
-            if (dayIdx === -1) dayIdx = 6; // แปลงวันอาทิตย์ไปท้ายสุด
-            dayCounts[dayIdx]++;
-          }
-        });
-
-        // ค้นหาวันที่งานชุกที่สุด
-        let maxCount = Math.max(...dayCounts);
-        let busiestDay = maxCount > 0 ? dayLabels[dayCounts.indexOf(maxCount)] : 'ไม่มี';
-
-        let advice = 'ตารางเวลาของคุณกระจายตัวได้ดีมาก ไม่มีวันไหนที่แน่นเกินไปครับ';
-        if (total === 0) {
-          advice = 'ไม่พบข้อมูลนัดหมายในระบบ ลองตรวจสอบว่ามีนัดหมายที่บันทึกไว้หรือไม่ครับ';
-        } else if (maxCount >= 3) {
-          advice = `คุณมีนัดหมายกระจุกตัวมากที่สุดใน <b>วัน${busiestDay}</b> (${maxCount} งาน) ควรเผื่อเวลาเดินทางและพักผ่อนด้วยครับ`;
-        }
-
+        // สร้างแถบแสดงหมวดหมู่
         let catHtml = '';
         if (Object.keys(categories).length > 0) {
           for (const [catName, count] of Object.entries(categories)) {
-            const pct = Math.round((count / total) * 100);
+            const pct = s.total > 0 ? Math.round((count / s.total) * 100) : 0;
             catHtml += `
               <div class="cat-item">
                 <div class="cat-header">
@@ -251,23 +203,22 @@
           <div class="stats-grid">
             <div class="stat-card total">
               <div class="stat-title">📋 ทั้งหมด</div>
-              <div class="stat-value">${total}</div>
+              <div class="stat-value">${s.total}</div>
             </div>
             <div class="stat-card done">
               <div class="stat-title">✅ เสร็จสิ้นแล้ว</div>
-              <div class="stat-value">${done}</div>
+              <div class="stat-value">${s.done}</div>
             </div>
             <div class="stat-card upcoming">
               <div class="stat-title">⏳ รอดำเนินการ</div>
-              <div class="stat-value">${upcoming}</div>
+              <div class="stat-value">${s.upcoming}</div>
             </div>
             <div class="stat-card cancelled">
               <div class="stat-title">❌ ยกเลิก/เลยกำหนด</div>
-              <div class="stat-value">${cancelled}</div>
+              <div class="stat-value">${s.cancelled}</div>
             </div>
           </div>
 
-          <!-- กราฟแท่งแทรฟฟิกนัดหมาย -->
           <div class="section-card">
             <div class="section-title">📊 สถิตินัดหมายตามวันในสัปดาห์</div>
             <div class="chart-container">
@@ -276,8 +227,8 @@
           </div>
 
           <div class="insight-card">
-            <div class="insight-header">💡 ข้อคิดเห็น & คำแนะนำ</div>
-            <div class="insight-body">${advice}</div>
+            <div class="insight-header">💡 ข้อคิดเห็น & สรุปภาพรวม</div>
+            <div class="insight-body">${d.advice || 'ไม่มีคำแนะนำ'}</div>
           </div>
 
           <div class="section-card">
@@ -286,15 +237,15 @@
           </div>
         `;
 
-        // สร้างกราฟแท่ง
+        // วาดกราฟแท่ง
         const ctx = document.getElementById('trafficChart').getContext('2d');
         new Chart(ctx, {
           type: 'bar',
           data: {
-            labels: dayLabels,
+            labels: traffic.labels,
             datasets: [{
               label: 'จำนวนนัดหมาย',
-              data: dayCounts,
+              data: traffic.counts,
               backgroundColor: '#06C755',
               borderRadius: 6,
               maxBarThickness: 28
@@ -303,17 +254,10 @@
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false }
-            },
+            plugins: { legend: { display: false } },
             scales: {
-              y: {
-                beginAtZero: true,
-                ticks: { stepSize: 1, precision: 0 }
-              },
-              x: {
-                grid: { display: false }
-              }
+              y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+              x: { grid: { display: false } }
             }
           }
         });
