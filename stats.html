@@ -190,16 +190,16 @@
               <div class="stat-value">${total}</div>
             </div>
             <div class="stat-card done">
-              <div class="stat-title">✅ เสร็จสิ้นแล้ว</div>
-              <div class="stat-value">${done}</div>
+                <div class="stat-title">✅ เสร็จสิ้นแล้ว</div>
+                <div class="stat-value">${done}</div>
             </div>
             <div class="stat-card upcoming">
-              <div class="stat-title">⏳ รอดำเนินการ</div>
-              <div class="stat-value">${upcoming}</div>
+                <div class="stat-title">⏳ รอดำเนินการ</div>
+                <div class="stat-value">${upcoming}</div>
             </div>
             <div class="stat-card overdue">
-              <div class="stat-title">⚠️ ยกเลิกแล้ว</div>
-              <div class="stat-value">${overdue}</div>
+                <div class="stat-title">❌ ยกเลิก</div>
+                <div class="stat-value">${d.cancelled_count ?? d.overdue_count ?? 0}</div>
             </div>
           </div>
         `;
