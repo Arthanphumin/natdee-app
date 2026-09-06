@@ -21,31 +21,37 @@
         // 1. เริ่มต้น LIFF SDK
         await liff.init({ liffId: "2011350023-6ASKwrct" });
         
-        // 2. เช็กว่าเปิดในแอป LINE หรือไม่ ถ้าไม่ได้ล็อกอินให้ล็อกอินก่อน
+        // 2. เช็กว่าล็อกอิน LINE หรือยัง
         if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
+            liff.login();
+            return;
         }
         
-        // 3. ดึง Profile ของผู้ใช้
-        const profile = await liff.getProfile();
-        const userId = profile.userId;
-
-        document.getElementById('stats-container').innerText = 'กำลังดึงข้อมูลสถิติ...';
-
-        // 4. ยิง Fetch ไปหา n8n / ngrok
-        const response = await fetch(`https://lanka-and-route-vsnet.trycloudflare.com/webhook/liff-dashboard-data?userId=${userId}`);
+        // 3. ดึง idToken สำหรับยืนยันตัวตนความปลอดภัยสูง
+        const idToken = liff.getIDToken();
+        
+        document.getElementById('stats-container').innerText = 'กำลังตรวจสอบตัวตนและดึงข้อมูลสถิติ...';
+        
+        // 4. ยิง Fetch แบบ POST ส่ง idToken ไปยัง n8n
+        const response = await fetch('https://lanka-and-route-vsnet.trycloudflare.com/webhook/liff-dashboard-data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id_token: idToken })
+        });
+        
         const result = await response.json();
-
+        
         if (result.status === "success") {
-          const d = result.data;
-          document.getElementById('stats-container').innerHTML = `
-            <p><b>ยอดนัดหมายทั้งหมด:</b> ${d.totalAppointments}</p>
-            <p><b>งานที่เสร็จสิ้น:</b> ${d.completedJobs}</p>
-            <p><b>รายได้รวม:</b> ${d.revenue} บาท</p>
-          `;
+            const d = result.data;
+            document.getElementById('stats-container').innerHTML = `
+                <p><b>ยอดนัดหมายทั้งหมด:</b> ${d.totalAppointments}</p>
+                <p><b>งานที่เสร็จสิ้น:</b> ${d.completedJobs}</p>
+                <p><b>รายได้รวม:</b> ${d.revenue} บาท</p>
+            `;
         } else {
-          document.getElementById('stats-container').innerText = 'ไม่พบข้อมูลสถิติของคุณ';
+            document.getElementById('stats-container').innerText = 'ไม่พบข้อมูลสถิติหรือการยืนยันตัวตนล้มเหลว';
         }
       } catch (err) {
         console.error("LIFF Error:", err);
