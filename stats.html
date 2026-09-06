@@ -176,7 +176,7 @@
         const d = res.data || res;
         const s = d.summary || { total: 0, done: 0, upcoming: 0, cancelled: 0 };
         const categories = d.categories || {};
-        const traffic = d.traffic || { labels: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'], counts: [0,0,0,0,0,0,0] };
+        const traffic = d.traffic || { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], counts: [0,0,0,0,0,0,0] };
 
         // สร้าง HTML หมวดหมู่
         let catHtml = '';
