@@ -3,171 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>นัดหมายทั้งหมด - นัดดี (NatDee)</title>
-    <!-- นำเข้า LIFF SDK -->
+    <title>นัดหมายทั้งหมดของฉัน 🦉</title>
+    <!-- LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <!-- นำเข้าฟอนต์ Google -->
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            --primary-color: #6B8E23; /* Olive Green */
-            --bg-color: #F9F9F6; /* Off-white / Cream */
-            --text-dark: #333333;
-            --text-light: #777777;
-            --card-bg: #FFFFFF;
-        }
-
-        body {
-            font-family: 'Prompt', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-dark);
-            margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            padding: 20px;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-
-        header h2 {
-            margin-top: 0;
-            color: var(--primary-color);
-            font-weight: 600;
-        }
-
-        /* Tabs */
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            background-color: #E0E0D8;
-            color: var(--text-light);
-            border-radius: 8px;
-            font-family: inherit;
-            font-weight: 500;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .tab-btn.active {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        /* Card */
-        .appointment-list {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            border-left: 4px solid var(--primary-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .card-info h4 {
-            margin: 0 0 5px 0;
-            font-size: 16px;
-        }
-
-        .card-info p {
-            margin: 0;
-            font-size: 13px;
-            color: var(--text-light);
-        }
-
-        .card-time {
-            text-align: right;
-        }
-
-        .card-time .date {
-            display: block;
-            font-weight: 600;
-            color: var(--primary-color);
-            font-size: 14px;
-        }
-
-        .card-time .time {
-            font-size: 12px;
-            color: var(--text-light);
-        }
-
-        /* Floating Action Button */
-        .fab {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 56px;
-            height: 56px;
-            background-color: var(--primary-color);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 28px;
-            box-shadow: 0 4px 10px rgba(107, 142, 35, 0.4);
-            cursor: pointer;
-            border: none;
-        }
-
-        /* Loading */
-        #loading {
-            text-align: center;
-            color: var(--text-light);
-            margin-top: 50px;
-        }
+        body { background-color: #F8F7F4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1F2D0F; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .active-filter { background-color: #4A5D4E; color: white; }
+        .inactive-filter { background-color: #FFFFFF; color: #556B2F; border: 1px solid #E5E5E5; }
     </style>
 </head>
-<body>
+<body class="p-4 max-w-md mx-auto min-h-screen">
 
-    <div class="container">
-        <header>
-            <h2>ตารางนัดหมาย</h2>
-        </header>
-
-        <div class="tabs">
-            <button class="tab-btn active" id="tab-upcoming">กำลังมาถึง</button>
-            <button class="tab-btn" id="tab-history">ประวัติ</button>
-        </div>
-
-        <div id="loading">กำลังโหลดข้อมูล...</div>
-
-        <div class="appointment-list" id="appointment-list" style="display: none;">
-            <!-- ข้อมูลจาก n8n จะมาแสดงที่นี่ -->
-        </div>
+    <!-- Header -->
+    <div class="bg-[#4A5D4E] text-white p-5 rounded-2xl shadow-md mb-4 text-center">
+        <h1 class="text-xl font-bold tracking-tight">🦉 นัดหมายทั้งหมดของคุณ</h1>
+        <p class="text-xs text-[#E5E5E5] mt-1">รายการนัดหมายและตารางชีวิตที่บันทึกไว้</p>
     </div>
 
-    <!-- ปุ่มสร้างนัดหมายใหม่ (กดแล้วปิดหน้าต่างกลับไปแชต) -->
-    <button class="fab" onclick="liff.closeWindow()">+</button>
+    <!-- Category Filter Bar (จะถูกสร้างด้วย JS) -->
+    <div id="filter-container" class="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-3">
+        <!-- ปุ่มฟิลเตอร์จะมาอยู่ตรงนี้ -->
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="text-center py-12">
+        <p class="text-sm text-gray-500 animate-pulse">กำลังโหลดข้อมูลนัดหมาย...</p>
+    </div>
+
+    <!-- Appointment List -->
+    <div id="appointment-container" class="space-y-3.5" style="display: none;">
+        <!-- การ์ดนัดหมายจะถูกสร้างด้วย JS -->
+    </div>
 
     <script>
-        // 🔴 1. ใส่ LIFF ID ของคุณ
+        // 🔴 1. ใส่ LIFF ID และ URL Cloudflared
         const LIFF_ID = "2011350023-z3qS09LJ"; 
-        
-        // 🔴 2. ใส่ URL ของ Cloudflared ที่ชี้ไปหา Webhook 'API_GetAppointments' ใน n8n
         const N8N_API_URL = "https://lanka-and-route-vsnet.trycloudflare.com/webhook/a3083faa-b717-4e24-b053-ce1bc7563a50"; 
 
         async function main() {
             await liff.init({ liffId: LIFF_ID });
-            
             if (liff.isLoggedIn()) {
-                // ดึง ID Token จาก LINE เพื่อเอาไปยืนยันตัวตนใน n8n (โหนด Verify_LINE_Token)
                 const idToken = liff.getIDToken();
                 fetchAppointments(idToken);
             } else {
@@ -177,48 +56,195 @@
 
         async function fetchAppointments(token) {
             try {
-                // สังเกตจาก n8n เส้นล่างระบุว่าเป็น POST request
                 const response = await fetch(N8N_API_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ token: token })
                 });
 
-                if (!response.ok) throw new Error("Network response was not ok");
+                if (!response.ok) throw new Error("Network response error");
                 
-                const data = await response.json();
+                let rawData = await response.json();
+                
+                // ป้องกันกรณี n8n ส่งมาแบบห่อ { json: { ... } } หรือแบบเรียบๆ
+                const data = rawData.map(item => item.json ? item.json : item);
                 renderAppointments(data);
 
             } catch (error) {
                 console.error("Error fetching data:", error);
-                document.getElementById('loading').innerText = "ไม่สามารถโหลดข้อมูลได้";
+                document.getElementById('loading-state').innerHTML = `<p class="text-red-500 text-sm">ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่</p>`;
             }
         }
 
-        function renderAppointments(data) {
-            document.getElementById('loading').style.display = 'none';
-            const listContainer = document.getElementById('appointment-list');
-            listContainer.style.display = 'flex';
-            
-            // ตัวอย่างการ Mock Data (เดี๋ยวคุณต้องเปลี่ยนให้ตรงกับฟิลด์ที่ n8n ส่งมาจริงๆ)
-            // ถ้า n8n คุณส่งมาเป็น Array สามารถใช้ data.map(...) ได้เลย
-            listContainer.innerHTML = `
-                <div class="card">
-                    <div class="card-info">
-                        <h4>คุยโปรเจกต์ นัดดี</h4>
-                        <p>📍 ห้องสมุด</p>
-                    </div>
-                    <div class="card-time">
-                        <span class="date">15 พ.ย.</span>
-                        <span class="time">10:00</span>
-                    </div>
-                </div>
-            `;
+        // ฟังก์ชันป้องกัน XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
-        // เริ่มการทำงาน
+        // ฟังก์ชันคำนวณเวลา (จากโค้ดเดิมของคุณ)
+        function formatStatus(status, datetimeStr, now) {
+            if (status === 'done') {
+                return { text: 'เสร็จสิ้น', isDone: true, isCancelled: false, badgeClass: 'bg-gray-100 text-gray-500 border-gray-200' };
+            }
+            if (!datetimeStr) {
+                return { text: status || 'รอดำเนินการ', isDone: false, isCancelled: false, badgeClass: 'bg-emerald-50 text-[#4A5D4E] border-emerald-200' };
+            }
+
+            const targetDate = new Date(datetimeStr.toString().replace(' ', 'T'));
+            const diffMs = targetDate - now;
+
+            if (isNaN(diffMs)) {
+                return { text: status || 'active', isDone: false, isCancelled: false, badgeClass: 'bg-emerald-50 text-[#4A5D4E] border-emerald-200' };
+            }
+
+            if (diffMs < 0) {
+                return { text: 'ยกเลิกแล้ว', isDone: false, isCancelled: true, badgeClass: 'bg-gray-100 text-gray-500 border-gray-200' };
+            }
+
+            const diffMinutes = Math.floor(diffMs / (1000 * 60));
+            const diffHours = Math.floor(diffMinutes / 60);
+            const diffDays = Math.floor(diffHours / 24);
+
+            let timeText = '';
+            if (diffDays > 0) {
+                const remainHours = diffHours % 24;
+                timeText = `อีก ${diffDays} วัน ${remainHours > 0 ? remainHours + ' ชม.' : ''}`;
+            } else if (diffHours > 0) {
+                const remainMins = diffMinutes % 60;
+                timeText = `อีก ${diffHours} ชม. ${remainMins > 0 ? remainMins + ' นาที' : ''}`;
+            } else {
+                timeText = `อีก ${Math.max(1, diffMinutes)} นาที`;
+            }
+
+            return { text: timeText, isDone: false, isCancelled: false, badgeClass: 'bg-emerald-50 text-[#4A5D4E] border-emerald-200' };
+        }
+
+        // ฟังก์ชันฟิลเตอร์หมวดหมู่
+        window.filterCategory = function(category, btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => {
+                b.className = 'filter-btn inactive-filter px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all';
+            });
+            btn.className = 'filter-btn active-filter px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all shadow-sm';
+
+            const cards = document.querySelectorAll('.appointment-card');
+            cards.forEach(card => {
+                if (category === 'all' || card.getAttribute('data-category') === category) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        };
+
+        // เรนเดอร์ UI หลัก
+        function renderAppointments(data) {
+            document.getElementById('loading-state').style.display = 'none';
+            const container = document.getElementById('appointment-container');
+            const filterContainer = document.getElementById('filter-container');
+            container.style.display = 'block';
+
+            const now = new Date();
+            const pastCutoff = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000));
+            const activeItems = [];
+            const pastItems = [];
+            const categoriesSet = new Set();
+
+            // คัดแยกข้อมูล
+            data.forEach(item => {
+                if (!item.event) return;
+                
+                const category = item.category || 'ทั่วไป';
+                categoriesSet.add(category);
+
+                const dtStr = item.datetime;
+                const status = item.status;
+                const targetDate = new Date((dtStr || '9999-12-31').replace(' ', 'T'));
+                
+                const isDone = status === 'done';
+                const isPast = targetDate.getTime() < now.getTime();
+
+                if (isDone || isPast) {
+                    if (targetDate.getTime() >= pastCutoff.getTime()) pastItems.push(item);
+                } else {
+                    activeItems.push(item);
+                }
+            });
+
+            // เรียงลำดับ
+            activeItems.sort((a, b) => new Date((a.datetime || '9999-12-31').replace(' ', 'T')).getTime() - new Date((b.datetime || '9999-12-31').replace(' ', 'T')).getTime());
+            pastItems.sort((a, b) => new Date((b.datetime || '1970-01-01').replace(' ', 'T')).getTime() - new Date((a.datetime || '1970-01-01').replace(' ', 'T')).getTime());
+
+            // ฟังก์ชันสร้างการ์ด 1 ใบ
+            const createCardHTML = (data) => {
+                const category = data.category || 'ทั่วไป';
+                const statusInfo = formatStatus(data.status, data.datetime, now);
+                const isMuted = statusInfo.isDone || statusInfo.isCancelled;
+                const stripeColor = isMuted ? 'bg-gray-300' : 'bg-[#4A5D4E]';
+                const cardOpacity = isMuted ? 'opacity-65 bg-[#FAFAFA]' : 'bg-white';
+                
+                let titleColor = 'text-[#1F2D0F]';
+                if (statusInfo.isCancelled) titleColor = 'text-gray-400 line-through';
+                else if (statusInfo.isDone) titleColor = 'text-gray-400';
+
+                return `
+                    <div class="appointment-card ${cardOpacity} p-4 rounded-2xl shadow-sm border border-[#E5E5E5] relative overflow-hidden transition-all duration-200" 
+                         data-category="${escapeHtml(category)}">
+                        <div class="absolute top-0 left-0 bottom-0 w-2 ${stripeColor}"></div>
+                        <div class="pl-2">
+                            <div class="flex justify-between items-center mb-1.5">
+                                <span class="text-[11px] font-medium bg-[#F8F7F4] text-[#4A5D4E] px-2.5 py-0.5 rounded-full border border-gray-200">
+                                    📌 ${escapeHtml(category)}
+                                </span>
+                                <span class="text-[11px] font-medium px-2 py-0.5 rounded-md border ${statusInfo.badgeClass}">
+                                    ${escapeHtml(statusInfo.text)}
+                                </span>
+                            </div>
+                            <h3 class="font-bold text-base ${titleColor} mt-1">${escapeHtml(data.event || '-')}</h3>
+                            <div class="mt-3 space-y-1 text-xs text-gray-600">
+                                <p class="flex items-center gap-1.5">📅 <span><strong>เวลา:</strong> ${escapeHtml(data.datetime || '-')}</span></p>
+                                <p class="flex items-center gap-1.5">📍 <span><strong>สถานที่:</strong> ${escapeHtml(data.location || '-')}</span></p>
+                            </div>
+                        </div>
+                    </div>`;
+            };
+
+            let cardsHtml = '';
+            if (activeItems.length === 0 && pastItems.length === 0) {
+                cardsHtml = `
+                    <div class="text-center py-12 bg-white rounded-2xl shadow-sm p-6 border border-[#E5E5E5]">
+                        <span class="text-4xl">📭</span>
+                        <p class="mt-3 font-semibold text-gray-700">ยังไม่มีนัดหมายในระบบ</p>
+                        <p class="text-xs text-gray-400 mt-1">พิมพ์บอกเวลานัดกับบอทในแชทได้เลยนะฮะ</p>
+                    </div>`;
+            } else {
+                if (activeItems.length > 0) cardsHtml += activeItems.map(createCardHTML).join('');
+                if (pastItems.length > 0) {
+                    cardsHtml += `
+                        <div class="pt-4 pb-1 text-center">
+                            <span class="text-[11px] font-semibold text-gray-400 bg-[#EFEFEF] px-3 py-1 rounded-full">
+                                ประวัติที่ผ่านมา (60 วันล่าสุด)
+                            </span>
+                        </div>`;
+                    cardsHtml += pastItems.map(createCardHTML).join('');
+                }
+            }
+            container.innerHTML = cardsHtml;
+
+            // สร้างปุ่มหมวดหมู่
+            let filterButtonsHtml = `<button onclick="filterCategory('all', this)" class="filter-btn active-filter px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all shadow-sm">ทั้งหมด</button>`;
+            categoriesSet.forEach(cat => {
+                filterButtonsHtml += `<button onclick="filterCategory('${escapeHtml(cat)}', this)" class="filter-btn inactive-filter px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all">${escapeHtml(cat)}</button>`;
+            });
+            filterContainer.innerHTML = filterButtonsHtml;
+        }
+
+        // เริ่มต้น
         main();
     </script>
 </body>
