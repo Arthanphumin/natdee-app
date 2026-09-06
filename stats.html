@@ -42,7 +42,7 @@
     .stat-title { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
     .stat-value { font-size: 26px; font-weight: 800; color: #0f172a; }
 
-    /* กล่องข้อมูลและกราฟ */
+    /* ส่วนกล่องกราฟ */
     .section-card {
       background: #ffffff;
       border-radius: 16px;
@@ -50,18 +50,51 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.04);
       margin-bottom: 16px;
     }
+    .section-header-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
     .section-title {
       font-size: 14px;
       font-weight: 700;
       color: #1e293b;
-      margin-bottom: 12px;
       display: flex;
       align-items: center;
       gap: 6px;
+      margin: 0;
     }
+
+    /* ปุ่มแท็บสลับมุมมอง (Segmented Toggle) */
+    .toggle-container {
+      display: flex;
+      background: #f1f5f9;
+      padding: 3px;
+      border-radius: 10px;
+      gap: 4px;
+    }
+    .toggle-btn {
+      flex: 1;
+      padding: 6px 10px;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .toggle-btn.active {
+      background: #ffffff;
+      color: #06C755;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
     .chart-container {
       position: relative;
-      height: 180px;
+      height: 190px;
       width: 100%;
     }
 
@@ -139,7 +172,7 @@
 
   <div class="header">
     <h2>แดชบอร์ดสถิติ</h2>
-    <p class="subtitle">ภาพรวมและบทวิเคราะห์ตารางนัดหมายของคุณ</p>
+    <p class="subtitle">ภาพรวมและบทวิเคราะห์ตารางชีวิตของคุณ</p>
   </div>
 
   <div id="content-container">
@@ -149,6 +182,43 @@
   <button class="btn-refresh" onclick="fetchData()">🔄 รีเฟรชข้อมูล</button>
 
   <script>
+    let myChart = null;
+    let chartState = {
+      labels: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'],
+      overallCounts: [0, 0, 0, 0, 0, 0, 0],
+      weeklyCounts: [0, 0, 0, 0, 0, 0, 0],
+      overallAdvice: '',
+      weeklyAdvice: ''
+    };
+
+    function parseDate(dtStr) {
+      if (!dtStr) return null;
+      return new Date(dtStr.replace(' ', 'T'));
+    }
+
+    function switchChart(mode) {
+      const btnOverall = document.getElementById('btn-overall');
+      const btnWeekly = document.getElementById('btn-weekly');
+      const adviceEl = document.getElementById('insight-text');
+
+      if (!myChart || !btnOverall || !btnWeekly) return;
+
+      if (mode === 'overall') {
+        btnOverall.classList.add('active');
+        btnWeekly.classList.remove('active');
+        myChart.data.datasets[0].data = chartState.overallCounts;
+        myChart.data.datasets[0].backgroundColor = '#06C755';
+        adviceEl.innerHTML = chartState.overallAdvice;
+      } else {
+        btnWeekly.classList.add('active');
+        btnOverall.classList.remove('active');
+        myChart.data.datasets[0].data = chartState.weeklyCounts;
+        myChart.data.datasets[0].backgroundColor = '#3b82f6';
+        adviceEl.innerHTML = chartState.weeklyAdvice;
+      }
+      myChart.update();
+    }
+
     async function fetchData() {
       const container = document.getElementById('content-container');
       container.innerHTML = '<div class="loading-box">🔄 กำลังดึงข้อมูลล่าสุด...</div>';
@@ -172,18 +242,95 @@
           throw new Error('เซิร์ฟเวอร์ตอบกลับสถานะ ' + response.status);
         }
 
-        const res = await response.json();
-        const d = res.data || res;
-        const s = d.summary || { total: 0, done: 0, upcoming: 0, cancelled: 0 };
-        const categories = d.categories || {};
-        const traffic = d.traffic || { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], counts: [0,0,0,0,0,0,0] };
+        const resData = await response.json();
+        
+        let list = [];
+        if (Array.isArray(resData)) {
+          list = resData;
+        } else if (resData.data && Array.isArray(resData.data)) {
+          list = resData.data;
+        } else if (typeof resData === 'object' && Object.keys(resData).length > 0) {
+          list = [resData];
+        }
 
-        // สร้าง HTML หมวดหมู่
+        // กรองแถวว่างเปล่าออก
+        list = list.filter(item => {
+          const row = item.json || item;
+          return row && (row.event || row.datetime || row.location || row.title);
+        });
+
+        const now = new Date();
+        const next7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+        let total = list.length;
+        let done = 0, upcoming = 0, cancelled = 0;
+        let categories = {};
+        
+        const dayLabels = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
+        const overallCounts = [0, 0, 0, 0, 0, 0, 0];
+        const weeklyCounts = [0, 0, 0, 0, 0, 0, 0];
+
+        list.forEach(item => {
+          const row = item.json || item;
+          const st = (row.status || '').toLowerCase().trim();
+          const dt = parseDate(row.datetime);
+
+          if (st === 'done') {
+            done++;
+          } else if (st === 'cancelled' || st === 'ยกเลิก' || (dt && dt < now)) {
+            cancelled++;
+          } else {
+            upcoming++;
+          }
+
+          const cat = row.category || 'ทั่วไป';
+          categories[cat] = (categories[cat] || 0) + 1;
+
+          if (dt && !isNaN(dt.getTime())) {
+            let dayIdx = dt.getDay() - 1; 
+            if (dayIdx === -1) dayIdx = 6;
+            
+            // สถิติภาพรวมลูปชีวิต
+            overallCounts[dayIdx]++;
+
+            // สถิติเฉพาะ 7 วันข้างหน้า
+            if (dt >= now && dt <= next7Days && st !== 'done' && st !== 'cancelled' && st !== 'ยกเลิก') {
+              weeklyCounts[dayIdx]++;
+            }
+          }
+        });
+
+        // คำนวณ Insight แผน 2 (ภาพรวม)
+        const maxOverall = Math.max(...overallCounts);
+        let overallAdvice = 'ตารางเวลาของคุณกระจายตัวได้ดีมาก ไม่มีวันไหนที่แน่นเกินไปครับ';
+        if (total === 0) {
+          overallAdvice = '🦉 ตอนนี้ยังไม่มีนัดหมายในระบบ เริ่มสร้างนัดแรกกับน้องนัดดีได้เลยครับ';
+        } else if (maxOverall >= 3) {
+          const busyDay = dayLabels[overallCounts.indexOf(maxOverall)];
+          overallAdvice = `💡 <b>วัน${busyDay}</b> คือวันด่านหินของคุณ! (มีงานสะสมถึง ${maxOverall} รายการ) สัปดาห์ไหนที่มีเรียนหรือนัดในวันนี้ ควรเคลียร์งานล่วงหน้านะครับ`;
+        }
+
+        // คำนวณ Insight แผน 1 (7 วันนี้)
+        const maxWeekly = Math.max(...weeklyCounts);
+        let weeklyAdvice = '🎉 7 วันนี้ตารางของคุณโล่งมาก ไม่มีนัดหมายที่ต้องกังวลเลย!';
+        if (maxWeekly > 0) {
+          const busyWeeklyDay = dayLabels[weeklyCounts.indexOf(maxWeekly)];
+          weeklyAdvice = `⚡ ใน 7 วันข้างหน้า วันที่งานแน่นที่สุดคือ <b>วัน${busyWeeklyDay}</b> (${maxWeekly} รายการ) อย่าลืมเตรียมพร้อมล่วงหน้านะครับ`;
+        }
+
+        chartState = {
+          labels: dayLabels,
+          overallCounts,
+          weeklyCounts,
+          overallAdvice,
+          weeklyAdvice
+        };
+
+        // แสดงหมวดหมู่
         let catHtml = '';
-        const catKeys = Object.keys(categories);
-        if (s.total > 0 && catKeys.length > 0) {
+        if (Object.keys(categories).length > 0 && total > 0) {
           for (const [catName, count] of Object.entries(categories)) {
-            const pct = Math.round((count / s.total) * 100);
+            const pct = Math.round((count / total) * 100);
             catHtml += `
               <div class="cat-item">
                 <div class="cat-header">
@@ -204,32 +351,38 @@
           <div class="stats-grid">
             <div class="stat-card total">
               <div class="stat-title">📋 ทั้งหมด</div>
-              <div class="stat-value">${s.total}</div>
+              <div class="stat-value">${total}</div>
             </div>
             <div class="stat-card done">
               <div class="stat-title">✅ เสร็จสิ้นแล้ว</div>
-              <div class="stat-value">${s.done}</div>
+              <div class="stat-value">${done}</div>
             </div>
             <div class="stat-card upcoming">
               <div class="stat-title">⏳ รอดำเนินการ</div>
-              <div class="stat-value">${s.upcoming}</div>
+              <div class="stat-value">${upcoming}</div>
             </div>
             <div class="stat-card cancelled">
               <div class="stat-title">❌ ยกเลิก/เลยกำหนด</div>
-              <div class="stat-value">${s.cancelled}</div>
+              <div class="stat-value">${cancelled}</div>
             </div>
           </div>
 
           <div class="section-card">
-            <div class="section-title">📊 สถิตินัดหมายตามวันในสัปดาห์</div>
+            <div class="section-header-wrap">
+              <div class="section-title">📊 ความหนาแน่นของตารางนัดหมาย</div>
+              <div class="toggle-container">
+                <button id="btn-overall" class="toggle-btn active" onclick="switchChart('overall')">ลูปชีวิตภาพรวม</button>
+                <button id="btn-weekly" class="toggle-btn" onclick="switchChart('weekly')">7 วันข้างหน้า</button>
+              </div>
+            </div>
             <div class="chart-container">
               <canvas id="trafficChart"></canvas>
             </div>
           </div>
 
           <div class="insight-card">
-            <div class="insight-header">💡 ข้อคิดเห็น & สรุปภาพรวม</div>
-            <div class="insight-body">${d.advice || 'ไม่มีข้อมูลคำแนะนำ'}</div>
+            <div class="insight-header">💡 ข้อคิดเห็น & คำแนะนำ</div>
+            <div id="insight-text" class="insight-body">${overallAdvice}</div>
           </div>
 
           <div class="section-card">
@@ -238,15 +391,14 @@
           </div>
         `;
 
-        // วาดกราฟแท่ง
         const ctx = document.getElementById('trafficChart').getContext('2d');
-        new Chart(ctx, {
+        myChart = new Chart(ctx, {
           type: 'bar',
           data: {
-            labels: traffic.labels,
+            labels: dayLabels,
             datasets: [{
               label: 'จำนวนนัดหมาย',
-              data: traffic.counts,
+              data: overallCounts,
               backgroundColor: '#06C755',
               borderRadius: 6,
               maxBarThickness: 26
