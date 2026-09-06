@@ -284,10 +284,10 @@
               <div class="stat-title">✅ เสร็จสิ้นแล้ว</div>
               <div class="stat-value">${s.done}</div>
             </div>
-            <div class="stat-card upcoming">
-              <div class="stat-title">⏳ รอดำเนินการ</div>
-              <div class="stat-value">${s.upcoming}</div>
-            </div>
+            <a href="appointments.html?filter=pending" class="block stat-card upcoming transition hover:scale-[1.02] cursor-pointer">
+                <div class="stat-title">⏳ รอดำเนินการ</div>
+                <div class="stat-value">${s.upcoming}</div>
+            </a>
             <div class="stat-card cancelled">
               <div class="stat-title">❌ ยกเลิก/เลยกำหนด</div>
               <div class="stat-value">${s.cancelled}</div>
