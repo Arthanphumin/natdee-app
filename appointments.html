@@ -24,6 +24,14 @@
         <p class="text-xs text-[#E5E5E5] mt-1">รายการนัดหมายและตารางชีวิตที่บันทึกไว้</p>
     </div>
 
+    <!-- ปุ่มเคลียร์ตัวกรอง (ซ่อนไว้ก่อน จะแสดงเฉพาะตอนที่ถูกกดมาจากหน้าสถิติ) -->
+    <div id="filter-banner" class="hidden mb-3 flex justify-between items-center bg-[#EAEFE9] px-4 py-2.5 rounded-xl border border-[#D0DDD0]">
+        <span class="text-xs font-semibold text-[#4A5D4E]" id="filter-text">🔍 แสดงเฉพาะ: รอดำเนินการ</span>
+        <button onclick="clearFilter()" class="text-xs bg-white text-[#4A5D4E] px-2.5 py-1 rounded-lg border border-[#C2D0C2] hover:bg-[#4A5D4E] hover:text-white transition">
+            ดูทั้งหมด ✕
+        </button>
+    </div>
+    
     <!-- Category Filter Bar (จะถูกสร้างด้วย JS) -->
     <div id="filter-container" class="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-3">
         <!-- ปุ่มฟิลเตอร์จะมาอยู่ตรงนี้ -->
@@ -180,6 +188,48 @@
             activeItems.sort((a, b) => new Date((a.datetime || '9999-12-31').replace(' ', 'T')).getTime() - new Date((b.datetime || '9999-12-31').replace(' ', 'T')).getTime());
             pastItems.sort((a, b) => new Date((b.datetime || '1970-01-01').replace(' ', 'T')).getTime() - new Date((a.datetime || '1970-01-01').replace(' ', 'T')).getTime());
 
+                        // ฟังก์ชันตรวจจับ URL ตอนโหลดหน้าเว็บ
+            window.addEventListener('DOMContentLoaded', () => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const filterType = urlParams.get('filter'); // เช่น ?filter=pending
+            
+                if (filterType === 'pending') {
+                    applyPendingFilter();
+                }
+            });
+            
+            // ฟังก์ชันกรองเฉพาะรายการรอดำเนินการ
+            function applyPendingFilter() {
+                // แสดงแถบบนสุดบอกสถานะการกรอง
+                document.getElementById('filter-banner').style.display = 'flex';
+            
+                const cards = document.querySelectorAll('.appointment-card');
+                cards.forEach(card => {
+                    // เช็คจากคลาสความโปร่งใส (ถ้าเป็นการ์ดที่ผ่านมาแล้วหรือเสร็จสิ้น จะมีคลาส opacity-65)
+                    const isMuted = card.classList.contains('opacity-65');
+                    
+                    if (isMuted) {
+                        card.style.display = 'none'; // ซ่อนรายการที่จบ/ยกเลิกแล้ว
+                    } else {
+                        card.style.display = 'block'; // แสดงเฉพาะรายการที่ active / รอดำเนินการ
+                    }
+                });
+            }
+            
+            // ฟังก์ชันกดปุ่ม "ดูทั้งหมด" เพื่อเคลียร์การกรอง
+            function clearFilter() {
+                // ลบ query string ?filter=pending ออกจาก URL โดยไม่ต้องรีโหลดหน้าเว็บใหม่
+                window.history.replaceState({}, document.title, window.location.pathname);
+                
+                //ซ่อนแบนเนอร์
+                document.getElementById('filter-banner').style.display = 'none';
+            
+                // แสดงการ์ดทั้งหมดเหมือนเดิม
+                const cards = document.querySelectorAll('.appointment-card');
+                cards.forEach(card => {
+                    card.style.display = 'block';
+                });
+            }
             // ฟังก์ชันสร้างการ์ด 1 ใบ
             const createCardHTML = (data) => {
                 const category = data.category || 'ทั่วไป';
