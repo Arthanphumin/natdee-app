@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>สถิติของฉัน - LINE LIFF</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <!-- Chart.js สำหรับทำกราฟแท่งมืออาชีพ -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -15,11 +17,11 @@
       color: #0f172a;
     }
 
-    .header { margin-bottom: 18px; }
+    .header { margin-bottom: 16px; }
     h2 { margin: 0 0 4px 0; color: #06C755; font-size: 22px; font-weight: 700; }
     .subtitle { color: #64748b; font-size: 13px; margin: 0; }
 
-    /* 4 การ์ดสถิติหลัก */
+    /* การ์ดสถิติ 4 ช่อง */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -41,14 +43,36 @@
     .stat-title { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
     .stat-value { font-size: 26px; font-weight: 800; color: #0f172a; }
 
-    /* กล่องข้อคิดเห็น & คำแนะนำ */
+    /* กล่องกราฟ & กล่องข้อมูล */
+    .section-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .chart-container {
+      position: relative;
+      height: 200px;
+      width: 100%;
+    }
+
+    /* กล่องคำแนะนำ */
     .insight-card {
       background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
       border: 1px solid #bbf7d0;
       border-radius: 16px;
       padding: 16px;
       margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.06);
     }
     .insight-header {
       font-size: 13px;
@@ -65,25 +89,8 @@
       line-height: 1.55;
     }
 
-    /* กล่องหมวดหมู่ */
-    .section-card {
-      background: #ffffff;
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-      margin-bottom: 16px;
-    }
-    .section-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: #1e293b;
-      margin-bottom: 14px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .cat-item { margin-bottom: 12px; }
+    /* แถบหมวดหมู่ */
+    .cat-item { margin-bottom: 10px; }
     .cat-item:last-child { margin-bottom: 0; }
     .cat-header {
       display: flex;
@@ -91,7 +98,7 @@
       font-size: 13px;
       font-weight: 600;
       color: #334155;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
     .cat-bar-bg {
       background: #f1f5f9;
@@ -103,10 +110,8 @@
       background: #06C755;
       height: 100%;
       border-radius: 10px;
-      transition: width 0.4s ease;
     }
 
-    /* ปุ่มกด */
     .btn-refresh {
       width: 100%;
       background: #ffffff;
@@ -117,7 +122,6 @@
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
     }
     .btn-refresh:active { background: #f8fafc; }
 
@@ -128,7 +132,6 @@
       text-align: center;
       color: #64748b;
       font-size: 14px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
       margin-bottom: 16px;
     }
   </style>
@@ -141,7 +144,7 @@
   </div>
 
   <div id="content-container">
-    <div class="loading-box">🔄 กำลังวิเคราะห์และโหลดข้อมูลสถิติ...</div>
+    <div class="loading-box">🔄 กำลังโหลดข้อมูลสถิติ...</div>
   </div>
 
   <button class="btn-refresh" onclick="fetchData()">🔄 รีเฟรชข้อมูล</button>
@@ -167,87 +170,63 @@
         });
 
         if (!response.ok) {
-          throw new Error('เซิร์ฟเวอร์ตอบกลับผิดพลาด (' + response.status + ')');
+          throw new Error('เซิร์ฟเวอร์ตอบกลับสถานะ ' + response.status);
         }
 
         const resData = await response.json();
         
-        let total = 0, done = 0, upcoming = 0, cancelled = 0;
-        let categories = {};
-        const daysMap = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
-        const dayCounts = { 'อาทิตย์': 0, 'จันทร์': 0, 'อังคาร': 0, 'พุธ': 0, 'พฤหัสบดี': 0, 'ศุกร์': 0, 'เสาร์': 0 };
-
-        // แปลงผลลัพธ์ให้เป็น Array เสมอ
         let list = [];
         if (Array.isArray(resData)) {
           list = resData;
         } else if (resData.data && Array.isArray(resData.data)) {
           list = resData.data;
-        } else if (typeof resData === 'object' && resData.event) {
+        } else if (typeof resData === 'object' && Object.keys(resData).length > 0) {
           list = [resData];
         }
 
+        let total = list.length;
+        let done = 0, upcoming = 0, cancelled = 0;
+        let categories = {};
+        
+        // แทรฟฟิกวันในสัปดาห์ (จันทร์ - อาทิตย์)
+        const dayLabels = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
+        const dayCounts = [0, 0, 0, 0, 0, 0, 0];
         const now = new Date();
-        total = list.length;
 
         list.forEach(item => {
           const row = item.json || item;
           const st = (row.status || '').toLowerCase().trim();
           const dt = row.datetime ? new Date(row.datetime) : null;
 
-          // แยกสถานะ
           if (st === 'done') {
             done++;
-          } else if (st === 'cancelled' || st === 'ยกเลิก') {
-            cancelled++;
-          } else if (dt && dt < now) {
+          } else if (st === 'cancelled' || st === 'ยกเลิก' || (dt && dt < now)) {
             cancelled++;
           } else {
             upcoming++;
           }
 
-          // สรุปหมวดหมู่
           const cat = row.category || 'ทั่วไป';
           categories[cat] = (categories[cat] || 0) + 1;
 
-          // วิเคราะห์วันในสัปดาห์
           if (dt && !isNaN(dt.getTime())) {
-            const dName = daysMap[dt.getDay()];
-            dayCounts[dName] = (dayCounts[dName] || 0) + 1;
+            let dayIdx = dt.getDay() - 1; 
+            if (dayIdx === -1) dayIdx = 6; // แปลงวันอาทิตย์ไปท้ายสุด
+            dayCounts[dayIdx]++;
           }
         });
 
-        // ค้นหาวันที่นัดเยอะที่สุด
-        let busiestDay = 'ไม่มี';
-        let maxDayCount = 0;
-        for (const [day, count] of Object.entries(dayCounts)) {
-          if (count > maxDayCount) {
-            maxDayCount = count;
-            busiestDay = day;
-          }
-        }
+        // ค้นหาวันที่งานชุกที่สุด
+        let maxCount = Math.max(...dayCounts);
+        let busiestDay = maxCount > 0 ? dayLabels[dayCounts.indexOf(maxCount)] : 'ไม่มี';
 
-        // ค้นหาหมวดหมู่ที่พบบ่อยสุด
-        let topCategory = 'ทั่วไป';
-        let maxCatCount = 0;
-        for (const [cat, count] of Object.entries(categories)) {
-          if (count > maxCatCount) {
-            maxCatCount = count;
-            topCategory = cat;
-          }
-        }
-
-        // สร้างบทวิเคราะห์และคำแนะนำ
         let advice = 'ตารางเวลาของคุณกระจายตัวได้ดีมาก ไม่มีวันไหนที่แน่นเกินไปครับ';
         if (total === 0) {
-          advice = 'ยังไม่มีรายการนัดหมายในระบบ เริ่มต้นสร้างนัดหมายแรกได้เลยครับ';
-        } else if (maxDayCount >= 3) {
-          advice = `นัดหมายของคุณชอบไปกระจุกหนักใน <b>วัน${busiestDay}</b> (${maxDayCount} งาน) แนะนำให้จัดสรรเวลาและพักผ่อนให้เพียงพอนะครับ`;
-        } else if (maxCatCount > 0) {
-          advice = `คุณมีนัดหมายเกี่ยวกับ <b>หมวด${topCategory}</b> มากที่สุด (${maxCatCount} รายการ) อย่าลืมเตรียมข้อมูลล่วงหน้านะครับ`;
+          advice = 'ไม่พบข้อมูลนัดหมายในระบบ ลองตรวจสอบว่ามีนัดหมายที่บันทึกไว้หรือไม่ครับ';
+        } else if (maxCount >= 3) {
+          advice = `คุณมีนัดหมายกระจุกตัวมากที่สุดใน <b>วัน${busiestDay}</b> (${maxCount} งาน) ควรเผื่อเวลาเดินทางและพักผ่อนด้วยครับ`;
         }
 
-        // สร้าง HTML แถบหมวดหมู่
         let catHtml = '';
         if (Object.keys(categories).length > 0) {
           for (const [catName, count] of Object.entries(categories)) {
@@ -271,7 +250,7 @@
         container.innerHTML = `
           <div class="stats-grid">
             <div class="stat-card total">
-              <div class="stat-title">📋 นัดหมายทั้งหมด</div>
+              <div class="stat-title">📋 ทั้งหมด</div>
               <div class="stat-value">${total}</div>
             </div>
             <div class="stat-card done">
@@ -283,21 +262,62 @@
               <div class="stat-value">${upcoming}</div>
             </div>
             <div class="stat-card cancelled">
-              <div class="stat-title">❌ ยกเลิกแล้ว</div>
+              <div class="stat-title">❌ ยกเลิก/เลยกำหนด</div>
               <div class="stat-value">${cancelled}</div>
             </div>
           </div>
 
+          <!-- กราฟแท่งแทรฟฟิกนัดหมาย -->
+          <div class="section-card">
+            <div class="section-title">📊 สถิตินัดหมายตามวันในสัปดาห์</div>
+            <div class="chart-container">
+              <canvas id="trafficChart"></canvas>
+            </div>
+          </div>
+
           <div class="insight-card">
-            <div class="insight-header">💡 ข้อคิดเห็น & สรุปภาพรวม</div>
+            <div class="insight-header">💡 ข้อคิดเห็น & คำแนะนำ</div>
             <div class="insight-body">${advice}</div>
           </div>
 
           <div class="section-card">
-            <div class="section-title">📊 การนัดหมายแยกตามหมวดหมู่</div>
+            <div class="section-title">📁 สัดส่วนตามหมวดหมู่</div>
             ${catHtml}
           </div>
         `;
+
+        // สร้างกราฟแท่ง
+        const ctx = document.getElementById('trafficChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: dayLabels,
+            datasets: [{
+              label: 'จำนวนนัดหมาย',
+              data: dayCounts,
+              backgroundColor: '#06C755',
+              borderRadius: 6,
+              maxBarThickness: 28
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1, precision: 0 }
+              },
+              x: {
+                grid: { display: false }
+              }
+            }
+          }
+        });
+
       } catch (err) {
         container.innerHTML = `<div class="loading-box" style="color:#ef4444;">⚠️ เกิดข้อผิดพลาด: ${err.message}</div>`;
       }
