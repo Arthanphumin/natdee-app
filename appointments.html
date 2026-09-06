@@ -78,6 +78,9 @@
                 const data = rawData.map(item => item.json ? item.json : item);
                 renderAppointments(data);
 
+                // ตรวจสอบ URL Filter หลังจากเรนเดอร์การ์ดเสร็จเรียบร้อยแล้ว
+                checkUrlFilterOnLoad();
+
             } catch (error) {
                 console.error("Error fetching data:", error);
                 document.getElementById('loading-state').innerHTML = `<p class="text-red-500 text-sm">ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่</p>`;
@@ -95,7 +98,7 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // ฟังก์ชันคำนวณเวลา (จากโค้ดเดิมของคุณ)
+        // ฟังก์ชันคำนวณเวลา
         function formatStatus(status, datetimeStr, now) {
             if (status === 'done') {
                 return { text: 'เสร็จสิ้น', isDone: true, isCancelled: false, badgeClass: 'bg-gray-100 text-gray-500 border-gray-200' };
@@ -150,6 +153,42 @@
             });
         };
 
+        // ฟังก์ชันตรวจจับ URL ตอนโหลดหน้าเว็บ (วางไว้นอก renderAppointments)
+        function checkUrlFilterOnLoad() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const filterType = urlParams.get('filter'); // เช่น ?filter=pending
+
+            if (filterType === 'pending') {
+                applyPendingFilter();
+            }
+        }
+
+        // ฟังก์ชันกรองเฉพาะรายการรอดำเนินการ
+        function applyPendingFilter() {
+            document.getElementById('filter-banner').style.display = 'flex';
+
+            const cards = document.querySelectorAll('.appointment-card');
+            cards.forEach(card => {
+                const isMuted = card.classList.contains('opacity-65');
+                if (isMuted) {
+                    card.style.display = 'none'; // ซ่อนรายการที่จบ/ยกเลิกแล้ว
+                } else {
+                    card.style.display = 'block'; // แสดงเฉพาะรายการรอดำเนินการ
+                }
+            });
+        }
+
+        // ฟังก์ชันกดปุ่ม "ดูทั้งหมด" เพื่อเคลียร์การกรอง
+        function clearFilter() {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            document.getElementById('filter-banner').style.display = 'none';
+
+            const cards = document.querySelectorAll('.appointment-card');
+            cards.forEach(card => {
+                card.style.display = 'block';
+            });
+        }
+
         // เรนเดอร์ UI หลัก
         function renderAppointments(data) {
             document.getElementById('loading-state').style.display = 'none';
@@ -188,48 +227,6 @@
             activeItems.sort((a, b) => new Date((a.datetime || '9999-12-31').replace(' ', 'T')).getTime() - new Date((b.datetime || '9999-12-31').replace(' ', 'T')).getTime());
             pastItems.sort((a, b) => new Date((b.datetime || '1970-01-01').replace(' ', 'T')).getTime() - new Date((a.datetime || '1970-01-01').replace(' ', 'T')).getTime());
 
-                        // ฟังก์ชันตรวจจับ URL ตอนโหลดหน้าเว็บ
-            window.addEventListener('DOMContentLoaded', () => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const filterType = urlParams.get('filter'); // เช่น ?filter=pending
-            
-                if (filterType === 'pending') {
-                    applyPendingFilter();
-                }
-            });
-            
-            // ฟังก์ชันกรองเฉพาะรายการรอดำเนินการ
-            function applyPendingFilter() {
-                // แสดงแถบบนสุดบอกสถานะการกรอง
-                document.getElementById('filter-banner').style.display = 'flex';
-            
-                const cards = document.querySelectorAll('.appointment-card');
-                cards.forEach(card => {
-                    // เช็คจากคลาสความโปร่งใส (ถ้าเป็นการ์ดที่ผ่านมาแล้วหรือเสร็จสิ้น จะมีคลาส opacity-65)
-                    const isMuted = card.classList.contains('opacity-65');
-                    
-                    if (isMuted) {
-                        card.style.display = 'none'; // ซ่อนรายการที่จบ/ยกเลิกแล้ว
-                    } else {
-                        card.style.display = 'block'; // แสดงเฉพาะรายการที่ active / รอดำเนินการ
-                    }
-                });
-            }
-            
-            // ฟังก์ชันกดปุ่ม "ดูทั้งหมด" เพื่อเคลียร์การกรอง
-            function clearFilter() {
-                // ลบ query string ?filter=pending ออกจาก URL โดยไม่ต้องรีโหลดหน้าเว็บใหม่
-                window.history.replaceState({}, document.title, window.location.pathname);
-                
-                //ซ่อนแบนเนอร์
-                document.getElementById('filter-banner').style.display = 'none';
-            
-                // แสดงการ์ดทั้งหมดเหมือนเดิม
-                const cards = document.querySelectorAll('.appointment-card');
-                cards.forEach(card => {
-                    card.style.display = 'block';
-                });
-            }
             // ฟังก์ชันสร้างการ์ด 1 ใบ
             const createCardHTML = (data) => {
                 const category = data.category || 'ทั่วไป';
