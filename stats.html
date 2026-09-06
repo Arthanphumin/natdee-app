@@ -20,7 +20,7 @@
     h2 { margin: 0 0 4px 0; color: #06C755; font-size: 22px; font-weight: 700; }
     .subtitle { color: #64748b; font-size: 13px; margin: 0; }
 
-    /* การ์ดสถิติ 4 ช่อง */
+    /* 4 การ์ดสถิติ */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -42,7 +42,7 @@
     .stat-title { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
     .stat-value { font-size: 26px; font-weight: 800; color: #0f172a; }
 
-    /* ส่วนกล่องกราฟ */
+    /* กล่องกราฟ */
     .section-card {
       background: #ffffff;
       border-radius: 16px;
@@ -66,7 +66,7 @@
       margin: 0;
     }
 
-    /* ปุ่มแท็บสลับมุมมอง (Segmented Toggle) */
+    /* ปุ่มสลับมุมมอง */
     .toggle-container {
       display: flex;
       background: #f1f5f9;
@@ -121,7 +121,7 @@
       line-height: 1.55;
     }
 
-    /* แถบหมวดหมู่ */
+    /* รายการหมวดหมู่ */
     .cat-item { margin-bottom: 10px; }
     .cat-item:last-child { margin-bottom: 0; }
     .cat-header {
@@ -191,11 +191,6 @@
       weeklyAdvice: ''
     };
 
-    function parseDate(dtStr) {
-      if (!dtStr) return null;
-      return new Date(dtStr.replace(' ', 'T'));
-    }
-
     function switchChart(mode) {
       const btnOverall = document.getElementById('btn-overall');
       const btnWeekly = document.getElementById('btn-weekly');
@@ -242,95 +237,27 @@
           throw new Error('เซิร์ฟเวอร์ตอบกลับสถานะ ' + response.status);
         }
 
-        const resData = await response.json();
-        
-        let list = [];
-        if (Array.isArray(resData)) {
-          list = resData;
-        } else if (resData.data && Array.isArray(resData.data)) {
-          list = resData.data;
-        } else if (typeof resData === 'object' && Object.keys(resData).length > 0) {
-          list = [resData];
-        }
-
-        // กรองแถวว่างเปล่าออก
-        list = list.filter(item => {
-          const row = item.json || item;
-          return row && (row.event || row.datetime || row.location || row.title);
-        });
-
-        const now = new Date();
-        const next7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-        let total = list.length;
-        let done = 0, upcoming = 0, cancelled = 0;
-        let categories = {};
-        
-        const dayLabels = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
-        const overallCounts = [0, 0, 0, 0, 0, 0, 0];
-        const weeklyCounts = [0, 0, 0, 0, 0, 0, 0];
-
-        list.forEach(item => {
-          const row = item.json || item;
-          const st = (row.status || '').toLowerCase().trim();
-          const dt = parseDate(row.datetime);
-
-          if (st === 'done') {
-            done++;
-          } else if (st === 'cancelled' || st === 'ยกเลิก' || (dt && dt < now)) {
-            cancelled++;
-          } else {
-            upcoming++;
-          }
-
-          const cat = row.category || 'ทั่วไป';
-          categories[cat] = (categories[cat] || 0) + 1;
-
-          if (dt && !isNaN(dt.getTime())) {
-            let dayIdx = dt.getDay() - 1; 
-            if (dayIdx === -1) dayIdx = 6;
-            
-            // สถิติภาพรวมลูปชีวิต
-            overallCounts[dayIdx]++;
-
-            // สถิติเฉพาะ 7 วันข้างหน้า
-            if (dt >= now && dt <= next7Days && st !== 'done' && st !== 'cancelled' && st !== 'ยกเลิก') {
-              weeklyCounts[dayIdx]++;
-            }
-          }
-        });
-
-        // คำนวณ Insight แผน 2 (ภาพรวม)
-        const maxOverall = Math.max(...overallCounts);
-        let overallAdvice = 'ตารางเวลาของคุณกระจายตัวได้ดีมาก ไม่มีวันไหนที่แน่นเกินไปครับ';
-        if (total === 0) {
-          overallAdvice = '🦉 ตอนนี้ยังไม่มีนัดหมายในระบบ เริ่มสร้างนัดแรกกับน้องนัดดีได้เลยครับ';
-        } else if (maxOverall >= 3) {
-          const busyDay = dayLabels[overallCounts.indexOf(maxOverall)];
-          overallAdvice = `💡 <b>วัน${busyDay}</b> คือวันด่านหินของคุณ! (มีงานสะสมถึง ${maxOverall} รายการ) สัปดาห์ไหนที่มีเรียนหรือนัดในวันนี้ ควรเคลียร์งานล่วงหน้านะครับ`;
-        }
-
-        // คำนวณ Insight แผน 1 (7 วันนี้)
-        const maxWeekly = Math.max(...weeklyCounts);
-        let weeklyAdvice = '🎉 7 วันนี้ตารางของคุณโล่งมาก ไม่มีนัดหมายที่ต้องกังวลเลย!';
-        if (maxWeekly > 0) {
-          const busyWeeklyDay = dayLabels[weeklyCounts.indexOf(maxWeekly)];
-          weeklyAdvice = `⚡ ใน 7 วันข้างหน้า วันที่งานแน่นที่สุดคือ <b>วัน${busyWeeklyDay}</b> (${maxWeekly} รายการ) อย่าลืมเตรียมพร้อมล่วงหน้านะครับ`;
-        }
+        const res = await response.json();
+        const d = res.data || res;
+        const s = d.summary || { total: 0, done: 0, upcoming: 0, cancelled: 0 };
+        const categories = d.categories || {};
+        const traffic = d.traffic || { labels: chartState.labels, overall: [0,0,0,0,0,0,0], weekly: [0,0,0,0,0,0,0] };
+        const advice = d.advice || { overall: 'ไม่มีข้อมูล', weekly: 'ไม่มีข้อมูล' };
 
         chartState = {
-          labels: dayLabels,
-          overallCounts,
-          weeklyCounts,
-          overallAdvice,
-          weeklyAdvice
+          labels: traffic.labels || chartState.labels,
+          overallCounts: traffic.overall || [0,0,0,0,0,0,0],
+          weeklyCounts: traffic.weekly || [0,0,0,0,0,0,0],
+          overallAdvice: advice.overall || 'ไม่มีข้อมูล',
+          weeklyAdvice: advice.weekly || 'ไม่มีข้อมูล'
         };
 
-        // แสดงหมวดหมู่
+        // สร้าง HTML แถบหมวดหมู่
         let catHtml = '';
-        if (Object.keys(categories).length > 0 && total > 0) {
+        const catKeys = Object.keys(categories);
+        if (s.total > 0 && catKeys.length > 0) {
           for (const [catName, count] of Object.entries(categories)) {
-            const pct = Math.round((count / total) * 100);
+            const pct = Math.round((count / s.total) * 100);
             catHtml += `
               <div class="cat-item">
                 <div class="cat-header">
@@ -351,19 +278,19 @@
           <div class="stats-grid">
             <div class="stat-card total">
               <div class="stat-title">📋 ทั้งหมด</div>
-              <div class="stat-value">${total}</div>
+              <div class="stat-value">${s.total}</div>
             </div>
             <div class="stat-card done">
               <div class="stat-title">✅ เสร็จสิ้นแล้ว</div>
-              <div class="stat-value">${done}</div>
+              <div class="stat-value">${s.done}</div>
             </div>
             <div class="stat-card upcoming">
               <div class="stat-title">⏳ รอดำเนินการ</div>
-              <div class="stat-value">${upcoming}</div>
+              <div class="stat-value">${s.upcoming}</div>
             </div>
             <div class="stat-card cancelled">
               <div class="stat-title">❌ ยกเลิก/เลยกำหนด</div>
-              <div class="stat-value">${cancelled}</div>
+              <div class="stat-value">${s.cancelled}</div>
             </div>
           </div>
 
@@ -382,7 +309,7 @@
 
           <div class="insight-card">
             <div class="insight-header">💡 ข้อคิดเห็น & คำแนะนำ</div>
-            <div id="insight-text" class="insight-body">${overallAdvice}</div>
+            <div id="insight-text" class="insight-body">${chartState.overallAdvice}</div>
           </div>
 
           <div class="section-card">
@@ -391,14 +318,15 @@
           </div>
         `;
 
+        // วาดกราฟเริ่มต้นเป็นภาพรวม
         const ctx = document.getElementById('trafficChart').getContext('2d');
         myChart = new Chart(ctx, {
           type: 'bar',
           data: {
-            labels: dayLabels,
+            labels: chartState.labels,
             datasets: [{
               label: 'จำนวนนัดหมาย',
-              data: overallCounts,
+              data: chartState.overallCounts,
               backgroundColor: '#06C755',
               borderRadius: 6,
               maxBarThickness: 26
