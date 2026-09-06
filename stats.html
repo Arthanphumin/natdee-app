@@ -284,10 +284,10 @@
               <div class="stat-title">✅ เสร็จสิ้นแล้ว</div>
               <div class="stat-value">${s.done}</div>
             </div>
-            <a href="appointments.html?filter=pending" class="block stat-card upcoming transition hover:scale-[1.02] cursor-pointer" style="text-decoration: none; color: inherit;">
+            <div onclick="location.href='appointments.html?filter=pending'" class="stat-card upcoming" style="cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
               <div class="stat-title">⏳ รอดำเนินการ</div>
               <div class="stat-value">${s.upcoming}</div>
-            </a>
+            </div>
             <div class="stat-card cancelled">
               <div class="stat-title">❌ ยกเลิก/เลยกำหนด</div>
               <div class="stat-value">${s.cancelled}</div>
