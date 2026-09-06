@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>นัดหมายทั้งหมด - นัดดี (NatDee)</title>
+    <!-- นำเข้า LIFF SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <!-- นำเข้าฟอนต์ Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #6B8E23; /* Olive Green */
+            --bg-color: #F9F9F6; /* Off-white / Cream */
+            --text-dark: #333333;
+            --text-light: #777777;
+            --card-bg: #FFFFFF;
+        }
+
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            padding: 20px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        header h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background-color: #E0E0D8;
+            color: var(--text-light);
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .tab-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        /* Card */
+        .appointment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-left: 4px solid var(--primary-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-info h4 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+        }
+
+        .card-info p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .card-time {
+            text-align: right;
+        }
+
+        .card-time .date {
+            display: block;
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 14px;
+        }
+
+        .card-time .time {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 56px;
+            height: 56px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            box-shadow: 0 4px 10px rgba(107, 142, 35, 0.4);
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Loading */
+        #loading {
+            text-align: center;
+            color: var(--text-light);
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h2>ตารางนัดหมาย</h2>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" id="tab-upcoming">กำลังมาถึง</button>
+            <button class="tab-btn" id="tab-history">ประวัติ</button>
+        </div>
+
+        <div id="loading">กำลังโหลดข้อมูล...</div>
+
+        <div class="appointment-list" id="appointment-list" style="display: none;">
+            <!-- ข้อมูลจาก n8n จะมาแสดงที่นี่ -->
+        </div>
+    </div>
+
+    <!-- ปุ่มสร้างนัดหมายใหม่ (กดแล้วปิดหน้าต่างกลับไปแชต) -->
+    <button class="fab" onclick="liff.closeWindow()">+</button>
+
+    <script>
+        // 🔴 1. ใส่ LIFF ID ของคุณ
+        const LIFF_ID = "2011350023-z3qS09LJ"; 
+        
+        // 🔴 2. ใส่ URL ของ Cloudflared ที่ชี้ไปหา Webhook 'API_GetAppointments' ใน n8n
+        const N8N_API_URL = "https://lanka-and-route-vsnet.trycloudflare.com/webhook/a3083faa-b717-4e24-b053-ce1bc7563a50"; 
+
+        async function main() {
+            await liff.init({ liffId: LIFF_ID });
+            
+            if (liff.isLoggedIn()) {
+                // ดึง ID Token จาก LINE เพื่อเอาไปยืนยันตัวตนใน n8n (โหนด Verify_LINE_Token)
+                const idToken = liff.getIDToken();
+                fetchAppointments(idToken);
+            } else {
+                liff.login();
+            }
+        }
+
+        async function fetchAppointments(token) {
+            try {
+                // สังเกตจาก n8n เส้นล่างระบุว่าเป็น POST request
+                const response = await fetch(N8N_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token: token })
+                });
+
+                if (!response.ok) throw new Error("Network response was not ok");
+                
+                const data = await response.json();
+                renderAppointments(data);
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                document.getElementById('loading').innerText = "ไม่สามารถโหลดข้อมูลได้";
+            }
+        }
+
+        function renderAppointments(data) {
+            document.getElementById('loading').style.display = 'none';
+            const listContainer = document.getElementById('appointment-list');
+            listContainer.style.display = 'flex';
+            
+            // ตัวอย่างการ Mock Data (เดี๋ยวคุณต้องเปลี่ยนให้ตรงกับฟิลด์ที่ n8n ส่งมาจริงๆ)
+            // ถ้า n8n คุณส่งมาเป็น Array สามารถใช้ data.map(...) ได้เลย
+            listContainer.innerHTML = `
+                <div class="card">
+                    <div class="card-info">
+                        <h4>คุยโปรเจกต์ นัดดี</h4>
+                        <p>📍 ห้องสมุด</p>
+                    </div>
+                    <div class="card-time">
+                        <span class="date">15 พ.ย.</span>
+                        <span class="time">10:00</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // เริ่มการทำงาน
+        main();
+    </script>
+</body>
+</html>
