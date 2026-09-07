@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>วิธีใช้งาน - นัดดี (NatDee)</title>
+    <!-- LIFF SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background-color: #F8F7F4; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            color: #1F2D0F; 
+        }
+        .timeline-line::before {
+            content: '';
+            position: absolute;
+            left: 19px;
+            top: 30px;
+            bottom: -20px;
+            width: 2px;
+            background-color: #C2D0C2;
+            z-index: 0;
+        }
+        .timeline-item:last-child .timeline-line::before {
+            display: none;
+        }
+        /* ซ่อน Scrollbar แต่ยังเลื่อนได้ */
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="max-w-md mx-auto relative pb-24">
+
+    <!-- Hero Section -->
+    <div class="bg-[#4A5D4E] text-white pt-10 pb-12 px-6 rounded-b-[40px] shadow-sm text-center relative overflow-hidden">
+        <!-- ลายน้ำตกแต่งพื้นหลัง (วงกลม) -->
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-white opacity-10 rounded-full"></div>
+        <div class="absolute -bottom-5 -left-5 w-20 h-20 bg-white opacity-10 rounded-full"></div>
+        
+        <!-- รูปโลโก้นกฮูก (เปลี่ยนลิงก์รูปตรงนี้ได้เลย) -->
+        <div class="w-20 h-20 mx-auto bg-white rounded-full flex items-center justify-center p-2 shadow-md mb-4 relative z-10">
+            <span class="text-4xl">🦉</span>
+            <!-- หากมีรูป URL ให้ลบ <span> ด้านบนแล้วใช้ <img> ด้านล่างแทน -->
+            <!-- <img src="ลิงก์รูปนกฮูกของคุณ.png" alt="NatDee Logo" class="w-full h-full object-cover"> -->
+        </div>
+        
+        <h1 class="text-2xl font-bold tracking-tight relative z-10">นัดดี (NatDee)</h1>
+        <p class="text-sm text-[#EAEFE9] mt-2 relative z-10">ผู้ช่วยจัดตารางชีวิต จบใน LINE เดียว</p>
+        <div class="mt-4 inline-block bg-white/20 px-4 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm relative z-10">
+            ✨ แค่พิมพ์บอก... นัดดีจัดการให้
+        </div>
+    </div>
+
+    <div class="p-5 space-y-6 -mt-6 relative z-20">
+        
+        <!-- 1. การใช้งานจริง (Core Loop) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-[#E5E5E5] p-5">
+            <h2 class="text-lg font-bold text-[#4A5D4E] mb-4 flex items-center gap-2">
+                <span>💬</span> 3 สเต็ป ใช้งานง่ายสุดๆ
+            </h2>
+            
+            <!-- Step 1 -->
+            <div class="mb-5">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="bg-[#4A5D4E] text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                    <h3 class="font-semibold text-sm">พิมพ์สั่งงานด้วยภาษาพูด</h3>
+                </div>
+                <div class="bg-[#F1F5F9] p-3 rounded-2xl rounded-tl-none ml-2 border border-[#E2E8F0] relative">
+                    <p class="text-[13px] text-gray-700" id="sample-text">พรุ่งนี้ 13:30 มีนัดทำโปรเจกต์ที่หอสมุดกลาง 📚</p>
+                </div>
+                <!-- ปุ่มคัดลอก (Interactive) -->
+                <button onclick="copyText()" id="copy-btn" class="mt-2 ml-2 flex items-center gap-1.5 text-[11px] font-semibold text-[#4A5D4E] bg-[#EAEFE9] px-3 py-1.5 rounded-full hover:bg-[#C2D0C2] transition active:scale-95">
+                    📋 <span id="copy-text">แตะเพื่อคัดลอกข้อความไปลองเล่น</span>
+                </button>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="mb-5">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="bg-[#4A5D4E] text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                    <h3 class="font-semibold text-sm">นัดดีสกัดข้อมูลให้ทันที</h3>
+                </div>
+                <div class="ml-7 bg-[#FAFAFA] p-3 rounded-xl border border-dashed border-[#C2D0C2] text-xs space-y-2">
+                    <div class="flex items-center gap-2"><span class="w-5 text-center">📅</span> <strong>เวลา:</strong> พรุ่งนี้ 13:30 น.</div>
+                    <div class="flex items-center gap-2"><span class="w-5 text-center">📍</span> <strong>สถานที่:</strong> หอสมุดกลาง</div>
+                    <div class="flex items-center gap-2"><span class="w-5 text-center">🏷️</span> <strong>หมวดหมู่:</strong> การเรียน</div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="bg-[#4A5D4E] text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                    <h3 class="font-semibold text-sm">รับการ์ดยืนยัน (Flex Message)</h3>
+                </div>
+                <div class="ml-7">
+                    <div class="bg-[#EAEFE9] p-3 rounded-xl border border-[#C2D0C2] text-center">
+                        <p class="text-[11px] text-[#4A5D4E] mb-2 font-semibold">ไม่ต้องพึ่งแอปอื่น กดปุ่มเดียวลงเครื่องเลย!</p>
+                        <div class="bg-white text-[#4A5D4E] font-bold text-xs py-2 rounded-lg shadow-sm border border-gray-100 flex justify-center items-center gap-1">
+                            📅 บันทึกลงปฏิทิน
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. ไทม์ไลน์แจ้งเตือน -->
+        <div class="bg-white rounded-2xl shadow-sm border border-[#E5E5E5] p-5">
+            <h2 class="text-lg font-bold text-[#4A5D4E] mb-4 flex items-center gap-2">
+                <span>🔔</span> ไทม์ไลน์แจ้งเตือนอัจฉริยะ
+            </h2>
+            
+            <div class="relative pl-1">
+                <!-- 7 วัน -->
+                <div class="timeline-item relative pl-10 mb-5 timeline-line">
+                    <div class="absolute left-0 top-0.5 w-10 h-10 bg-[#F0FDF4] border border-[#BBF7D0] rounded-full flex items-center justify-center text-lg z-10 shadow-sm">⚡</div>
+                    <h3 class="font-bold text-sm text-[#166534]">7 วันก่อนนัด</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">เตือนเตรียมตัวล่วงหน้าสำหรับงานใหญ่ หรืองานโปรเจกต์</p>
+                </div>
+                <!-- 3 วัน -->
+                <div class="timeline-item relative pl-10 mb-5 timeline-line">
+                    <div class="absolute left-0 top-0.5 w-10 h-10 bg-[#FFFBEB] border border-[#FDE68A] rounded-full flex items-center justify-center text-lg z-10 shadow-sm">🕒</div>
+                    <h3 class="font-bold text-sm text-[#B45309]">3 วันก่อนนัด</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">เตือนทบทวนความพร้อม และนัดหมายเพื่อนในกลุ่ม</p>
+                </div>
+                <!-- 1 วัน -->
+                <div class="timeline-item relative pl-10">
+                    <div class="absolute left-0 top-0.5 w-10 h-10 bg-[#FEF2F2] border border-[#FECACA] rounded-full flex items-center justify-center text-lg z-10 shadow-sm">⏰</div>
+                    <h3 class="font-bold text-sm text-[#991B1B]">1 วันก่อนนัด</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">เตือน Final Call ป้องกันการลืมเด็ดขาด!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. ฟีเจอร์อื่นๆ -->
+        <div class="grid grid-cols-2 gap-3">
+            <div class="bg-[#F8F7F4] p-4 rounded-2xl border border-[#E5E5E5] text-center">
+                <span class="text-3xl mb-2 block">📊</span>
+                <h3 class="text-[12px] font-bold text-[#4A5D4E] mb-1">แดชบอร์ดสถิติ</h3>
+                <p class="text-[10px] text-gray-500 leading-relaxed">รู้ทันตารางชีวิตล่วงหน้า ช่วยรักษาสมดุลเรียนและพักผ่อน</p>
+            </div>
+            <div class="bg-[#F8F7F4] p-4 rounded-2xl border border-[#E5E5E5] text-center">
+                <span class="text-3xl mb-2 block">🔒</span>
+                <h3 class="text-[12px] font-bold text-[#4A5D4E] mb-1">ความปลอดภัย</h3>
+                <p class="text-[10px] text-gray-500 leading-relaxed">จัดการข้อมูลส่วนบุคคลได้เอง มีระบบ PDPA รองรับ</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Sticky Footer Button -->
+    <div class="fixed bottom-0 left-0 w-full p-4 bg-gradient-to-t from-white via-white to-transparent z-50">
+        <button onclick="closeLiff()" class="w-full max-w-md mx-auto block bg-[#06C755] hover:bg-[#05b34c] text-white font-bold py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2">
+            <span>💬</span> กลับไปหน้าแชตเพื่อเริ่มใช้งาน!
+        </button>
+    </div>
+
+    <script>
+        // 🔴 1. ใส่ LIFF ID สำหรับหน้าวิธีใช้งาน
+        const LIFF_ID = "2011350023-m6M2rxLv"; 
+
+        async function main() {
+            await liff.init({ liffId: LIFF_ID });
+        }
+
+        // ฟังก์ชันคัดลอกข้อความ
+        function copyText() {
+            const textToCopy = document.getElementById('sample-text').innerText;
+            const btn = document.getElementById('copy-btn');
+            const textSpan = document.getElementById('copy-text');
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                // เปลี่ยน UI เป็นสีเขียวตอนก๊อปปี้สำเร็จ
+                btn.classList.remove('bg-[#EAEFE9]', 'text-[#4A5D4E]');
+                btn.classList.add('bg-[#D1FAE5]', 'text-[#065F46]');
+                textSpan.innerText = 'คัดลอกแล้ว! วางในแชตได้เลย ✅';
+                
+                // คืนค่าปุ่มกลับมาเหมือนเดิมหลัง 3 วินาที
+                setTimeout(() => {
+                    btn.classList.add('bg-[#EAEFE9]', 'text-[#4A5D4E]');
+                    btn.classList.remove('bg-[#D1FAE5]', 'text-[#065F46]');
+                    textSpan.innerText = 'แตะเพื่อคัดลอกข้อความไปลองเล่น';
+                }, 3000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                alert("ไม่สามารถคัดลอกได้ กรุณาลองอีกครั้ง");
+            });
+        }
+
+        // ฟังก์ชันปิด LIFF
+        function closeLiff() {
+            if (liff.isLoggedIn()) {
+                liff.closeWindow();
+            } else {
+                // เผื่อเปิดทดสอบบนเบราว์เซอร์ธรรมดา
+                alert("สำหรับใช้งานผ่านแอปพลิเคชัน LINE เท่านั้น");
+            }
+        }
+
+        // เริ่มต้นการทำงาน
+        main();
+    </script>
+</body>
+</html>
