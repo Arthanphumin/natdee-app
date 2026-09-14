@@ -1,224 +1,963 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>สถิติของฉัน - LINE LIFF</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background: #f1f5f9;
-      margin: 0;
-      padding: 16px;
-      color: #0f172a;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>แดชบอร์ดสถิติ 🦉</title>
 
-    .header { margin-bottom: 16px; }
-    h2 { margin: 0 0 4px 0; color: #06C755; font-size: 22px; font-weight: 700; }
-    .subtitle { color: #64748b; font-size: 13px; margin: 0; }
+    <!-- Google Fonts: Prompt + Noto Sans Thai -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&family=Prompt:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
 
-    /* 4 การ์ดสถิติ */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    .stat-card {
-      background: #ffffff;
-      border-radius: 16px;
-      padding: 14px 16px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-      border-left: 5px solid #cbd5e1;
-    }
-    .stat-card.total { border-left-color: #3b82f6; }
-    .stat-card.done { border-left-color: #10b981; }
-    .stat-card.upcoming { border-left-color: #f59e0b; }
-    .stat-card.cancelled { border-left-color: #ef4444; }
+    <!-- LIFF SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
-    .stat-title { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
-    .stat-value { font-size: 26px; font-weight: 800; color: #0f172a; }
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    /* กล่องกราฟ */
-    .section-card {
-      background: #ffffff;
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-      margin-bottom: 16px;
-    }
-    .section-header-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-    .section-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: #1e293b;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin: 0;
-    }
+    <!-- Config (must load before main script) -->
+    <script src="config.js"></script>
 
-    /* ปุ่มสลับมุมมอง */
-    .toggle-container {
-      display: flex;
-      background: #f1f5f9;
-      padding: 3px;
-      border-radius: 10px;
-      gap: 4px;
-    }
-    .toggle-btn {
-      flex: 1;
-      padding: 6px 10px;
-      border: none;
-      background: transparent;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      color: #64748b;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .toggle-btn.active {
-      background: #ffffff;
-      color: #06C755;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    }
+    <style>
+      /* ─── Reset & Base ─────────────────────────────── */
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    .chart-container {
-      position: relative;
-      height: 190px;
-      width: 100%;
-    }
-
-    /* กล่องคำแนะนำ */
-    .insight-card {
-      background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
-      border: 1px solid #bbf7d0;
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-    .insight-header {
-      font-size: 13px;
-      font-weight: 700;
-      color: #166534;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 6px;
-    }
-    .insight-body {
-      font-size: 13px;
-      color: #15803d;
-      line-height: 1.55;
-    }
-
-    /* รายการหมวดหมู่ */
-    .cat-item { margin-bottom: 10px; }
-    .cat-item:last-child { margin-bottom: 0; }
-    .cat-header {
-      display: flex;
-      justify-content: space-between;
-      font-size: 13px;
-      font-weight: 600;
-      color: #334155;
-      margin-bottom: 4px;
-    }
-    .cat-bar-bg {
-      background: #f1f5f9;
-      height: 7px;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    .cat-bar-fill {
-      background: #06C755;
-      height: 100%;
-      border-radius: 10px;
-    }
-
-    .btn-refresh {
-      width: 100%;
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      color: #334155;
-      padding: 13px;
-      border-radius: 14px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .btn-refresh:active { background: #f8fafc; }
-
-    .loading-box {
-      background: #ffffff;
-      padding: 35px 20px;
-      border-radius: 16px;
-      text-align: center;
-      color: #64748b;
-      font-size: 14px;
-      margin-bottom: 16px;
-    }
-  </style>
-</head>
-<body>
-
-  <div class="header">
-    <h2>แดชบอร์ดสถิติ</h2>
-    <p class="subtitle">ภาพรวมและบทวิเคราะห์ตารางชีวิตของคุณ</p>
-  </div>
-
-  <div id="content-container">
-    <div class="loading-box">🔄 กำลังโหลดข้อมูลสถิติ...</div>
-  </div>
-
-  <button class="btn-refresh" onclick="fetchData()">🔄 รีเฟรชข้อมูล</button>
-
-  <script>
-    let myChart = null;
-    let chartState = {
-      labels: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'],
-      overallCounts: [0, 0, 0, 0, 0, 0, 0],
-      weeklyCounts: [0, 0, 0, 0, 0, 0, 0],
-      overallAdvice: '',
-      weeklyAdvice: ''
-    };
-
-    function switchChart(mode) {
-      const btnOverall = document.getElementById('btn-overall');
-      const btnWeekly = document.getElementById('btn-weekly');
-      const adviceEl = document.getElementById('insight-text');
-
-      if (!myChart || !btnOverall || !btnWeekly) return;
-
-      if (mode === 'overall') {
-        btnOverall.classList.add('active');
-        btnWeekly.classList.remove('active');
-        myChart.data.datasets[0].data = chartState.overallCounts;
-        myChart.data.datasets[0].backgroundColor = '#06C755';
-        adviceEl.innerHTML = chartState.overallAdvice;
-      } else {
-        btnWeekly.classList.add('active');
-        btnOverall.classList.remove('active');
-        myChart.data.datasets[0].data = chartState.weeklyCounts;
-        myChart.data.datasets[0].backgroundColor = '#3b82f6';
-        adviceEl.innerHTML = chartState.weeklyAdvice;
+      body {
+        font-family: 'Prompt', 'Noto Sans Thai', -apple-system, BlinkMacSystemFont,
+          'Segoe UI', Roboto, sans-serif;
+        background-color: #FAF7F2;
+        color: #4A5568;
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
       }
-      myChart.update();
-    }
 
-    async function fetchData() {
-      const container = document.getElementById('content-container');
-      container.innerHTML = '<div class="loading-box">🔄 กำลังดึงข้อมูลล่าสุด...</div>';
+      /* ─── Layout ────────────────────────────────────── */
+      .page-wrapper {
+        max-width: 448px;
+        margin: 0 auto;
+        padding: 0 16px 48px;
+      }
 
-      try {
+      /* ─── Hero Header ───────────────────────────────── */
+      .hero {
+        background: linear-gradient(150deg, #3a4f3e 0%, #4A5D4E 55%, #576d5c 100%);
+        border-radius: 0 0 24px 24px;
+        padding: 20px 20px 28px;
+        margin: 0 -16px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Watermark circles */
+      .hero::before,
+      .hero::after {
+        content: '';
+        position: absolute;
+        border-radius: 50%;
+        pointer-events: none;
+      }
+      .hero::before {
+        width: 200px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.05);
+        top: -60px;
+        right: -50px;
+      }
+      .hero::after {
+        width: 130px;
+        height: 130px;
+        background: rgba(255, 255, 255, 0.06);
+        bottom: -40px;
+        left: 20px;
+      }
+
+      .hero-top-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .hero-owl-tile {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.18);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+      }
+
+      .hero-date-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 99px;
+        padding: 5px 12px;
+        font-size: 11px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+      }
+
+      .hero-date-badge .dev-tag {
+        background: #E67E22;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        border-radius: 99px;
+        padding: 1px 7px;
+      }
+
+      .hero-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #ffffff;
+        line-height: 1.3;
+        position: relative;
+        z-index: 1;
+      }
+
+      .hero-subtitle {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.65);
+        margin-top: 4px;
+        line-height: 1.5;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ─── Section spacing ────────────────────────────── */
+      .section {
+        margin-top: 20px;
+      }
+
+      .section-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #2D3748;
+        margin-bottom: 12px;
+      }
+
+      /* ─── Cards ──────────────────────────────────────── */
+      .card {
+        background: #ffffff;
+        border: 1px solid #e7e5e4;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      }
+
+      /* ─── 4-Stat Grid ────────────────────────────────── */
+      .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .stat-card {
+        background: #ffffff;
+        border: 1px solid #e7e5e4;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        padding: 14px 14px 14px 18px;
+        border-left-width: 4px;
+        border-left-style: solid;
+        text-decoration: none;
+        display: block;
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+        cursor: pointer;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .stat-card:active {
+        transform: scale(0.97);
+      }
+
+      .stat-card.no-link {
+        cursor: default;
+      }
+
+      .stat-card.no-link:hover {
+        transform: none;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      }
+
+      .stat-card.no-link:active {
+        transform: none;
+      }
+
+      .stat-card-icon {
+        font-size: 20px;
+        margin-bottom: 4px;
+      }
+
+      .stat-card-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: #A0AEC0;
+        margin-bottom: 2px;
+      }
+
+      .stat-card-value {
+        font-size: 28px;
+        font-weight: 800;
+        line-height: 1.1;
+      }
+
+      .stat-card-hint {
+        font-size: 11px;
+        color: #A0AEC0;
+        margin-top: 3px;
+      }
+
+      /* ─── Segmented Control ──────────────────────────── */
+      .seg-control {
+        background: #FAF7F2;
+        border-radius: 10px;
+        padding: 3px;
+        display: flex;
+        gap: 2px;
+        margin-bottom: 14px;
+      }
+
+      .seg-btn {
+        flex: 1;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        padding: 8px 6px;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 600;
+        color: #A0AEC0;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+      }
+
+      .seg-btn.active {
+        background: #ffffff;
+        color: #4A5D4E;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      /* ─── Chart container ────────────────────────────── */
+      .chart-container {
+        position: relative;
+        height: 185px;
+      }
+
+      /* ─── Insight Card ───────────────────────────────── */
+      .insight-card {
+        background: #DCFCE7;
+        border: 1px solid #bbf7d0;
+        border-radius: 16px;
+        padding: 16px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .insight-icon-tile {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        border-radius: 12px;
+        background: rgba(6, 199, 85, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+      }
+
+      .insight-header {
+        font-size: 10px;
+        font-weight: 700;
+        color: #166534;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 6px;
+      }
+
+      .insight-body {
+        font-size: 13px;
+        color: #166534;
+        line-height: 1.65;
+      }
+
+      /* ─── Category Progress Bars ─────────────────────── */
+      .cat-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .cat-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .cat-info {
+        flex: 0 0 auto;
+        width: 130px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+      }
+
+      .cat-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #4A5568;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 90px;
+      }
+
+      .cat-badge {
+        border-radius: 99px;
+        padding: 2px 10px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .cat-bar-wrap {
+        flex: 1;
+        background: #F0EDE8;
+        border-radius: 99px;
+        height: 7px;
+        overflow: hidden;
+      }
+
+      .cat-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #4A5D4E, #06C755);
+        border-radius: 99px;
+        width: 0%;
+        transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* ─── Refresh Button ─────────────────────────────── */
+      .btn-refresh {
+        display: block;
+        width: 100%;
+        padding: 11px 16px;
+        background: #ffffff;
+        border: 1.5px solid #4A5D4E;
+        border-radius: 12px;
+        color: #4A5D4E;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: center;
+        transition: background 0.18s ease, color 0.18s ease;
+      }
+
+      .btn-refresh:hover {
+        background: #4A5D4E;
+        color: #ffffff;
+      }
+
+      .btn-refresh:active {
+        opacity: 0.85;
+      }
+
+      /* ─── Loading State ──────────────────────────────── */
+      .loading-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 64px 24px;
+        gap: 14px;
+      }
+
+      .spinner {
+        width: 36px;
+        height: 36px;
+        border: 3px solid #e7e5e4;
+        border-top-color: #4A5D4E;
+        border-radius: 50%;
+        animation: spin 0.75s linear infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .loading-text {
+        font-size: 13px;
+        color: #A0AEC0;
+        font-weight: 500;
+      }
+
+      /* ─── Error State ────────────────────────────────── */
+      .error-text {
+        font-size: 13px;
+        color: #E11D48;
+        font-weight: 500;
+        text-align: center;
+        padding: 20px 0;
+      }
+
+      /* ─── Guard Card (not-in-LINE) ───────────────────── */
+      .guard-card {
+        background: #ffffff;
+        border: 1px solid #e7e5e4;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        padding: 32px 24px;
+        text-align: center;
+        margin-top: 32px;
+      }
+
+      .guard-owl {
+        font-size: 52px;
+        margin-bottom: 16px;
+      }
+
+      .guard-heading {
+        font-size: 15px;
+        font-weight: 700;
+        color: #2D3748;
+        line-height: 1.5;
+        margin-bottom: 10px;
+      }
+
+      .guard-sub {
+        font-size: 13px;
+        color: #A0AEC0;
+        line-height: 1.6;
+      }
+
+      /* ─── Badge colour classes ───────────────────────── */
+      .badge-general    { background: #FEF3C7; color: #92400E; }
+      .badge-study      { background: #E2E8F0; color: #475569; }
+      .badge-health     { background: #DCFCE7; color: #166534; }
+      .badge-social     { background: #FCE7F3; color: #9D174D; }
+      .badge-work       { background: #E0E7FF; color: #3730A3; }
+
+      /* ─── Utility ────────────────────────────────────── */
+      .hidden { display: none !important; }
+    </style>
+  </head>
+
+  <body>
+    <!-- ═══════════════════════════════════════════════ -->
+    <!--  LOADING STATE                                  -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="loading-state" class="loading-wrap">
+      <div class="spinner"></div>
+      <p class="loading-text">กำลังโหลดสถิติ...</p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!--  GUARD STATE (not in LINE client)               -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="guard-state" class="page-wrapper hidden">
+      <div class="guard-card">
+        <div class="guard-owl">🦉</div>
+        <p class="guard-heading">
+          ระบบนี้ออกแบบสำหรับใช้งาน<br />ผ่านแอปพลิเคชัน LINE บนสมาร์ตโฟนเท่านั้น
+        </p>
+        <p class="guard-sub">กรุณาเปิดผ่านห้องแชต LINE</p>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!--  MAIN CONTENT                                   -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="main-content" class="hidden">
+
+      <!-- ── Hero Header ─────────────────────────────── -->
+      <div class="hero" id="hero-header">
+        <div class="hero-top-row">
+          <div class="hero-owl-tile">🦉</div>
+          <div class="hero-date-badge">
+            <span id="hero-date-text"></span>
+            <span class="dev-tag hidden" id="dev-tag">⚡ DEV</span>
+          </div>
+        </div>
+        <h1 class="hero-title">แดชบอร์ดสถิติ</h1>
+        <p class="hero-subtitle">ภาพรวมและบทวิเคราะห์ตารางชีวิตของคุณ</p>
+      </div>
+
+      <!-- ── Page body ────────────────────────────────── -->
+      <div class="page-wrapper">
+
+        <!-- Error banner -->
+        <div id="error-banner" class="hidden">
+          <p class="error-text" id="error-text"></p>
+        </div>
+
+        <!-- ── 4-Stat Cards ─────────────────────────── -->
+        <div class="section">
+          <div class="stat-grid">
+
+            <!-- Total -->
+            <a
+              href="appointments.html"
+              class="stat-card"
+              style="border-left-color: #4A5D4E;"
+            >
+              <div class="stat-card-icon">📋</div>
+              <div class="stat-card-label">นัดหมายทั้งหมด</div>
+              <div class="stat-card-value" style="color: #4A5D4E;" id="stat-total">—</div>
+              <div class="stat-card-hint">รายการทั้งหมด</div>
+            </a>
+
+            <!-- Done -->
+            <a
+              href="appointments.html?filter=done"
+              class="stat-card"
+              style="border-left-color: #06C755;"
+            >
+              <div class="stat-card-icon">✅</div>
+              <div class="stat-card-label">เสร็จสิ้นแล้ว</div>
+              <div class="stat-card-value" style="color: #06C755;" id="stat-done">—</div>
+              <div class="stat-card-hint">เสร็จเรียบร้อย</div>
+            </a>
+
+            <!-- Upcoming -->
+            <a
+              href="appointments.html?filter=pending"
+              class="stat-card"
+              style="border-left-color: #E67E22;"
+            >
+              <div class="stat-card-icon">⏳</div>
+              <div class="stat-card-label">ที่กำลังจะมาถึง</div>
+              <div class="stat-card-value" style="color: #E67E22;" id="stat-upcoming">—</div>
+              <div class="stat-card-hint">รอดำเนินการ</div>
+            </a>
+
+            <!-- Cancelled (static — no link) -->
+            <div
+              class="stat-card no-link"
+              style="border-left-color: #E11D48;"
+            >
+              <div class="stat-card-icon">❌</div>
+              <div class="stat-card-label">ยกเลิกแล้ว</div>
+              <div class="stat-card-value" style="color: #E11D48;" id="stat-cancelled">—</div>
+              <div class="stat-card-hint">ถูกยกเลิก</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── Chart Section ────────────────────────── -->
+        <div class="section">
+          <p class="section-title">📊 ความหนาแน่นของตารางนัดหมาย</p>
+          <div class="card" style="padding: 16px;">
+
+            <!-- Segmented Control -->
+            <div class="seg-control" role="tablist">
+              <button
+                id="seg-overall"
+                class="seg-btn active"
+                role="tab"
+                aria-selected="true"
+                onclick="switchChartMode('overall')"
+              >🔄 ลูปชีวิตภาพรวม</button>
+              <button
+                id="seg-weekly"
+                class="seg-btn"
+                role="tab"
+                aria-selected="false"
+                onclick="switchChartMode('weekly')"
+              >📆 7 วันข้างหน้า</button>
+            </div>
+
+            <!-- Chart.js Canvas -->
+            <div class="chart-container">
+              <canvas id="traffic-chart"></canvas>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── Insight Card ─────────────────────────── -->
+        <div class="section">
+          <div class="insight-card">
+            <div class="insight-icon-tile">💡</div>
+            <div>
+              <p class="insight-header">ข้อคิดเห็น &amp; คำแนะนำ</p>
+              <p class="insight-body" id="advice-body">—</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Category Progress Bars ───────────────── -->
+        <div class="section">
+          <div class="card" style="padding: 16px 18px;">
+            <p class="section-title" style="margin-bottom: 16px;">🗂️ สัดส่วนตามหมวดหมู่</p>
+            <div id="category-bars">
+              <!-- Injected by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Refresh Button ───────────────────────── -->
+        <div class="section">
+          <button class="btn-refresh" onclick="handleRefresh()">
+            🔄 รีเฟรชข้อมูล
+          </button>
+        </div>
+
+      </div><!-- /.page-wrapper -->
+    </div><!-- /#main-content -->
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!--  MAIN SCRIPT                                    -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <script>
+      'use strict';
+
+      /* ─── Dev mode detection ──────────────────────── */
+      const isDev =
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        !window.location.hostname;
+
+      /* ─── Mock Data ───────────────────────────────── */
+      const MOCK_DATA = {
+        summary: { total: 24, done: 14, upcoming: 7, cancelled: 3 },
+        categories: {
+          'การเรียน': 9,
+          'สุขภาพ': 6,
+          'งาน/โปรเจกต์': 5,
+          'สังสรรค์': 3,
+          'ทั่วไป': 1,
+        },
+        traffic: {
+          labels: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'],
+          overall: [4, 6, 3, 7, 5, 2, 3],
+          weekly:  [1, 2, 0, 3, 1, 1, 0],
+        },
+        advice: {
+          overall: '📌 <strong>วันพฤหัสบดี</strong>เป็นวันที่คุณมีงานหนาแน่นที่สุดในรอบนี้ ลองจัดสรรงานบางส่วนไปวันอื่นเพื่อรักษาความสมดุล ✨',
+          weekly:  '🗓️ สัปดาห์นี้มีนัดสำคัญวันพฤหัส เตรียมตัวไว้ล่วงหน้าอย่างน้อย 1 วันเพื่อผลลัพธ์ที่ดีที่สุด 💪',
+        },
+      };
+
+      /* ─── State ───────────────────────────────────── */
+      let chartInstance  = null;
+      let currentMode    = 'overall';
+      let globalTraffic  = null;
+      let globalAdvice   = null;
+
+      /* ─── Thai date helper ────────────────────────── */
+      function getTodayThai() {
+        const now  = new Date();
+        const opts = {
+          weekday: 'short',
+          day:     'numeric',
+          month:   'short',
+          year:    'numeric',
+          timeZone: 'Asia/Bangkok',
+        };
+        return now.toLocaleDateString('th-TH', opts);
+      }
+
+      /* ─── Badge class resolver ────────────────────── */
+      function getCatBadgeClass(name) {
+        if (!name) return 'badge-general';
+        if (name.includes('เรียน') || name.includes('การเรียน')) return 'badge-study';
+        if (name.includes('สุขภาพ'))                               return 'badge-health';
+        if (name.includes('สังสรรค์'))                             return 'badge-social';
+        if (name.includes('งาน') || name.includes('โปรเจกต์'))    return 'badge-work';
+        return 'badge-general';
+      }
+
+      /* ─── Category icon resolver ──────────────────── */
+      function getCatIcon(name) {
+        if (!name) return '📌';
+        if (name.includes('เรียน') || name.includes('การเรียน')) return '📚';
+        if (name.includes('สุขภาพ'))   return '🏃';
+        if (name.includes('สังสรรค์')) return '🎉';
+        if (name.includes('งาน') || name.includes('โปรเจกต์')) return '💼';
+        return '📌';
+      }
+
+      /* ─── Render summary cards ────────────────────── */
+      function renderSummary(summary) {
+        document.getElementById('stat-total').textContent     = summary.total     ?? 0;
+        document.getElementById('stat-done').textContent      = summary.done      ?? 0;
+        document.getElementById('stat-upcoming').textContent  = summary.upcoming  ?? 0;
+        document.getElementById('stat-cancelled').textContent = summary.cancelled ?? 0;
+      }
+
+      /* ─── Render category progress bars ──────────── */
+      function renderCategories(categories) {
+        if (!categories || typeof categories !== 'object') return;
+
+        const entries = Object.entries(categories);
+        if (entries.length === 0) return;
+
+        const maxVal = Math.max(...entries.map(([, v]) => Number(v) || 0));
+        const container = document.getElementById('category-bars');
+        container.innerHTML = '';
+
+        entries.forEach(([name, count]) => {
+          const pct         = maxVal > 0 ? Math.round((Number(count) / maxVal) * 100) : 0;
+          const badgeClass  = getCatBadgeClass(name);
+          const icon        = getCatIcon(name);
+
+          const row = document.createElement('div');
+          row.className = 'cat-row';
+          row.innerHTML = `
+            <div class="cat-info">
+              <span class="cat-name">${icon} ${escapeHtml(name)}</span>
+              <span class="cat-badge ${badgeClass}">${escapeHtml(String(count))}</span>
+            </div>
+            <div class="cat-bar-wrap">
+              <div class="cat-bar-fill" data-pct="${pct}"></div>
+            </div>
+          `;
+          container.appendChild(row);
+        });
+
+        /* Animate bars after paint */
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            document.querySelectorAll('.cat-bar-fill').forEach((el) => {
+              el.style.width = el.dataset.pct + '%';
+            });
+          });
+        });
+      }
+
+      /* ─── Render insight text ─────────────────────── */
+      function renderAdvice(advice, mode) {
+        const el = document.getElementById('advice-body');
+        if (!advice) { el.textContent = '—'; return; }
+        const text = (typeof advice === 'object') ? (advice[mode] || advice.overall || '—') : advice;
+        el.innerHTML = text;
+      }
+
+      /* ─── Build Chart.js gradient ─────────────────── */
+      function buildGradient(ctx, isWeekly) {
+        const gradient = ctx.createLinearGradient(0, 0, 0, 185);
+        if (isWeekly) {
+          gradient.addColorStop(0, '#f59e0b');
+          gradient.addColorStop(1, '#E67E22');
+        } else {
+          gradient.addColorStop(0, '#06C755');
+          gradient.addColorStop(1, '#4A5D4E');
+        }
+        return gradient;
+      }
+
+      /* ─── Render / re-render chart ────────────────── */
+      function renderChart(traffic, mode) {
+        if (!traffic) return;
+
+        const canvas = document.getElementById('traffic-chart');
+        const ctx    = canvas.getContext('2d');
+        const isWeekly = mode === 'weekly';
+        const dataset  = isWeekly ? (traffic.weekly || []) : (traffic.overall || []);
+
+        /* Destroy previous instance */
+        if (chartInstance) {
+          chartInstance.destroy();
+          chartInstance = null;
+        }
+
+        const gradient = buildGradient(ctx, isWeekly);
+
+        chartInstance = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: traffic.labels || [],
+            datasets: [{
+              data: dataset,
+              backgroundColor: gradient,
+              borderRadius: 8,
+              borderSkipped: false,
+              maxBarThickness: 28,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+              duration: 450,
+              easing: 'easeOutQuart',
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#2D3748',
+                titleFont: { family: "'Prompt', sans-serif", size: 12 },
+                bodyFont:  { family: "'Prompt', sans-serif", size: 12 },
+                padding: 10,
+                cornerRadius: 8,
+                callbacks: {
+                  label: (ctx) => ` ${ctx.parsed.y} นัด`,
+                },
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1,
+                  color: '#A0AEC0',
+                  font: { family: "'Prompt', sans-serif", size: 11 },
+                  precision: 0,
+                },
+                grid: {
+                  color: '#F0EDE8',
+                  drawBorder: false,
+                },
+              },
+              x: {
+                grid: { display: false },
+                ticks: {
+                  color: '#A0AEC0',
+                  font: { family: "'Prompt', sans-serif", size: 11 },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      /* ─── Segmented control switch ────────────────── */
+      function switchChartMode(mode) {
+        currentMode = mode;
+
+        document.getElementById('seg-overall').classList.toggle('active', mode === 'overall');
+        document.getElementById('seg-overall').setAttribute('aria-selected', mode === 'overall');
+        document.getElementById('seg-weekly').classList.toggle('active',  mode === 'weekly');
+        document.getElementById('seg-weekly').setAttribute('aria-selected', mode === 'weekly');
+
+        renderChart(globalTraffic, mode);
+        renderAdvice(globalAdvice, mode);
+      }
+
+      /* ─── Full render pipeline ────────────────────── */
+      function renderAll(data) {
+        /* Normalise: accept res.data or res directly */
+        const payload = (data && data.data) ? data.data : data;
+
+        const summary    = payload.summary    || {};
+        const categories = payload.categories || {};
+        const traffic    = payload.traffic    || null;
+        const advice     = payload.advice     || null;
+
+        globalTraffic = traffic;
+        globalAdvice  = advice;
+
+        renderSummary(summary);
+        renderCategories(categories);
+        renderChart(traffic, currentMode);
+        renderAdvice(advice, currentMode);
+
+        /* Show page, hide loading */
+        document.getElementById('loading-state').classList.add('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+      }
+
+      /* ─── Show error ──────────────────────────────── */
+      function showError(msg) {
+        document.getElementById('loading-state').classList.add('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+        const banner = document.getElementById('error-banner');
+        const text   = document.getElementById('error-text');
+        banner.classList.remove('hidden');
+        text.textContent = msg;
+      }
+
+      /* ─── Show guard (not in LINE) ────────────────── */
+      function showGuard() {
+        document.getElementById('loading-state').classList.add('hidden');
+        document.getElementById('guard-state').classList.remove('hidden');
+      }
+
+      /* ─── XSS helper ──────────────────────────────── */
+      function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      /* ─── Hero date setup ─────────────────────────── */
+      function setupHeroDate() {
+        document.getElementById('hero-date-text').textContent = getTodayThai();
+        if (isDev) {
+          document.getElementById('dev-tag').classList.remove('hidden');
+        }
+      }
+
+      /* ─── Refresh handler ─────────────────────────── */
+      function handleRefresh() {
+        /* Tear down chart before re-init to avoid canvas memory leak */
+        if (chartInstance) {
+          chartInstance.destroy();
+          chartInstance = null;
+        }
+        currentMode   = 'overall';
+        globalTraffic = null;
+        globalAdvice  = null;
+
+        /* Reset segments */
+        document.getElementById('seg-overall').classList.add('active');
+        document.getElementById('seg-overall').setAttribute('aria-selected', 'true');
+        document.getElementById('seg-weekly').classList.remove('active');
+        document.getElementById('seg-weekly').setAttribute('aria-selected', 'false');
+
+        /* Hide content, show loading */
+        document.getElementById('main-content').classList.add('hidden');
+        document.getElementById('error-banner').classList.add('hidden');
+        document.getElementById('loading-state').classList.remove('hidden');
+
+        if (isDev) {
+          setTimeout(() => renderAll(MOCK_DATA), 600);
+        } else {
+          initProduction();
+        }
+      }
+
+      /* ─── Production fetch flow ───────────────────── */
+      async function initProduction() {
+        try {
+          await liff.init({ liffId: CONFIG.LIFF.STATS });
+        } catch (e) {
+          showError('⚠️ ไม่สามารถเชื่อมต่อ LINE ได้ กรุณาปิดแล้วเปิดใหม่');
+          return;
+        }
+
+        if (!liff.isInClient()) {
+          showGuard();
+          return;
+        }
+
         if (!liff.isLoggedIn()) {
           liff.login();
           return;
@@ -226,136 +965,48 @@
 
         const idToken = liff.getIDToken();
 
-        const response = await fetch('https://mug-nil-sen-protection.trycloudflare.com/webhook/72fb0b75-69ec-4a82-9f8b-1f895eea30f2', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          cache: 'no-store',
-          body: JSON.stringify({ id_token: idToken })
-        });
-
-        if (!response.ok) {
-          throw new Error('เซิร์ฟเวอร์ตอบกลับสถานะ ' + response.status);
+        if (!idToken) {
+          showError('⚠️ ไม่พบ Token กรุณาปิดแล้วเปิดใหม่ผ่าน LINE');
+          return;
         }
 
-        const res = await response.json();
-        const d = res.data || res;
-        const s = d.summary || { total: 0, done: 0, upcoming: 0, cancelled: 0 };
-        const categories = d.categories || {};
-        const traffic = d.traffic || { labels: chartState.labels, overall: [0,0,0,0,0,0,0], weekly: [0,0,0,0,0,0,0] };
-        const advice = d.advice || { overall: 'ไม่มีข้อมูล', weekly: 'ไม่มีข้อมูล' };
+        try {
+          const response = await fetch(CONFIG.API.STATS, {
+            method: 'POST',
+            headers: {
+              'Content-Type':   'application/json',
+              'Authorization':  'Bearer ' + idToken,
+              'Cache-Control':  'no-store',
+            },
+            body: JSON.stringify({ id_token: idToken }),
+          });
 
-        chartState = {
-          labels: traffic.labels || chartState.labels,
-          overallCounts: traffic.overall || [0,0,0,0,0,0,0],
-          weeklyCounts: traffic.weekly || [0,0,0,0,0,0,0],
-          overallAdvice: advice.overall || 'ไม่มีข้อมูล',
-          weeklyAdvice: advice.weekly || 'ไม่มีข้อมูล'
-        };
-
-        // สร้าง HTML แถบหมวดหมู่
-        let catHtml = '';
-        const catKeys = Object.keys(categories);
-        if (s.total > 0 && catKeys.length > 0) {
-          for (const [catName, count] of Object.entries(categories)) {
-            const pct = Math.round((count / s.total) * 100);
-            catHtml += `
-              <div class="cat-item">
-                <div class="cat-header">
-                  <span>📁 ${catName}</span>
-                  <span>${count} งาน (${pct}%)</span>
-                </div>
-                <div class="cat-bar-bg">
-                  <div class="cat-bar-fill" style="width: ${pct}%;"></div>
-                </div>
-              </div>
-            `;
+          if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
           }
-        } else {
-          catHtml = '<div style="color:#94a3b8; font-size:13px; text-align:center; padding: 10px 0;">ไม่มีข้อมูลหมวดหมู่</div>';
+
+          const raw = await response.json();
+          /* Support both { data: {...} } and direct shape */
+          const payload = (raw && raw.data) ? raw.data : raw;
+          renderAll(payload);
+
+        } catch (err) {
+          console.error('[stats] fetch error:', err);
+          showError('⚠️ ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่');
         }
-
-        container.innerHTML = `
-          <div class="stats-grid">
-            <div class="stat-card total">
-              <div class="stat-title">📋 ทั้งหมด</div>
-              <div class="stat-value">${s.total}</div>
-            </div>
-            <div class="stat-card done">
-              <div class="stat-title">✅ เสร็จสิ้นแล้ว</div>
-              <div class="stat-value">${s.done}</div>
-            </div>
-            <div onclick="location.href='appointments.html?filter=pending'" class="stat-card upcoming" style="cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-              <div class="stat-title">⏳ รอดำเนินการ</div>
-              <div class="stat-value">${s.upcoming}</div>
-            </div>
-            <div class="stat-card cancelled">
-              <div class="stat-title">❌ ยกเลิก/เลยกำหนด</div>
-              <div class="stat-value">${s.cancelled}</div>
-            </div>
-          </div>
-
-          <div class="section-card">
-            <div class="section-header-wrap">
-              <div class="section-title">📊 ความหนาแน่นของตารางนัดหมาย</div>
-              <div class="toggle-container">
-                <button id="btn-overall" class="toggle-btn active" onclick="switchChart('overall')">ลูปชีวิตภาพรวม</button>
-                <button id="btn-weekly" class="toggle-btn" onclick="switchChart('weekly')">7 วันข้างหน้า</button>
-              </div>
-            </div>
-            <div class="chart-container">
-              <canvas id="trafficChart"></canvas>
-            </div>
-          </div>
-
-          <div class="insight-card">
-            <div class="insight-header">💡 ข้อคิดเห็น & คำแนะนำ</div>
-            <div id="insight-text" class="insight-body">${chartState.overallAdvice}</div>
-          </div>
-
-          <div class="section-card">
-            <div class="section-title">สัดส่วนตามหมวดหมู่</div>
-            ${catHtml}
-          </div>
-        `;
-
-        // วาดกราฟเริ่มต้นเป็นภาพรวม
-        const ctx = document.getElementById('trafficChart').getContext('2d');
-        myChart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: chartState.labels,
-            datasets: [{
-              label: 'จำนวนนัดหมาย',
-              data: chartState.overallCounts,
-              backgroundColor: '#06C755',
-              borderRadius: 6,
-              maxBarThickness: 26
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              y: {
-                beginAtZero: true,
-                suggestedMax: 3,
-                ticks: { stepSize: 1, precision: 0 }
-              },
-              x: { grid: { display: false } }
-            }
-          }
-        });
-
-      } catch (err) {
-        container.innerHTML = `<div class="loading-box" style="color:#ef4444;">⚠️ เกิดข้อผิดพลาด: ${err.message}</div>`;
       }
-    }
 
-    window.onload = async function() {
-      await liff.init({ liffId: "2011350023-6ASKwrct" });
-      fetchData();
-    };
-  </script>
-</body>
+      /* ─── Entrypoint ──────────────────────────────── */
+      (function init() {
+        setupHeroDate();
+
+        if (isDev) {
+          /* Dev mode: render mock immediately, skip LIFF & fetch */
+          setTimeout(() => renderAll(MOCK_DATA), 0);
+        } else {
+          initProduction();
+        }
+      })();
+    </script>
+  </body>
 </html>
