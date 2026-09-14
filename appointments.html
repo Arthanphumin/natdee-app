@@ -440,6 +440,65 @@
         }
       }
 
+      /* ─── Category Filter Bar ──────────────────────────────────── */
+      .cat-filter-wrap {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+        padding-bottom: 2px;
+      }
+      .cat-filter-wrap::-webkit-scrollbar {
+        display: none;
+      }
+
+      .cat-pill {
+        flex-shrink: 0;
+        border: 1.5px solid #e7e5e4;
+        background: #ffffff;
+        border-radius: 99px;
+        padding: 4px 12px;
+        font-family: inherit;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #718096;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          color 0.15s,
+          border-color 0.15s;
+        white-space: nowrap;
+      }
+      .cat-pill:active {
+        opacity: 0.75;
+      }
+      .cat-pill.active {
+        background: #4a5d4e;
+        border-color: #4a5d4e;
+        color: #ffffff;
+      }
+
+      /* ─── Past-card: muted style ────────────────────────────────── */
+      .appointment-card.is-past {
+        background: #fafaf9; /* stone-50 */
+        border-color: #e7e5e4;
+        opacity: 0.78;
+      }
+      .appointment-card.is-past .card-event,
+      .appointment-card.is-past .card-detail-row {
+        color: #94a3b8;
+      }
+
+      /* ─── Cancelled card: line-through + deeper mute ────────────── */
+      .appointment-card.is-cancelled .card-event {
+        text-decoration: line-through;
+        color: #a0aec0;
+      }
+      .appointment-card.is-cancelled {
+        opacity: 0.65;
+      }
+
       /* ─── Utility: hidden ──────────────────────────────────────── */
       .d-none {
         display: none !important;
@@ -516,6 +575,16 @@
           >
             📁 ผ่านไปแล้ว
           </button>
+        </div>
+
+        <!-- Category Filter Bar -->
+        <div class="cat-filter-wrap" id="catFilter" aria-label="กรองหมวดหมู่">
+          <button class="cat-pill active" data-cat="ทั้งหมด">ทั้งหมด</button>
+          <button class="cat-pill" data-cat="การเรียน">📚 การเรียน</button>
+          <button class="cat-pill" data-cat="สุขภาพ">💊 สุขภาพ</button>
+          <button class="cat-pill" data-cat="การทำงาน">💼 การทำงาน</button>
+          <button class="cat-pill" data-cat="สังสรรค์">🎉 สังสรรค์</button>
+          <button class="cat-pill" data-cat="ทั่วไป">📌 ทั่วไป</button>
         </div>
 
         <!-- Section count label -->
@@ -737,30 +806,62 @@
       }
 
       /* ─── Determine tab ("pending" | "past") ─────────────────────── */
+      /**
+       * งานกำลังมาถึง: status !== 'done' && status !== 'cancelled'
+       * งานผ่านไปแล้ว: status === 'done' || status === 'cancelled' || datetime ผ่านมาแล้ว
+       */
       function getTab(item, now) {
         const st = (item.status || "").toLowerCase();
-        if (st === "done") return "past";
-        const dt = parseDate(item.datetime);
+        if (st === "done" || st === "cancelled") return "past";
+        // ถ้า datetime ผ่านมาแล้วก็จัดเป็น past เช่นกัน (เวลาเลย แต่ไม่ได้ mark done)
+        const dt = parseDate(item.datetime || item.date);
         if (dt && !isNaN(dt) && dt.getTime() < now.getTime()) return "past";
         return "pending";
       }
 
       /* ─── Build Card HTML ────────────────────────────────────────── */
       function buildCardHTML(item, now) {
-        const status = formatStatus(item.status, item.datetime, now);
+        // ── อ่านฟิลด์จาก DB จริง (รองรับทั้ง field name หลัก และ alias)
+        const rawEvent = item.event || item.title || "ไม่มีชื่อนัดหมาย";
+        const rawDatetime = item.datetime || item.date || "";
+        const rawLocation = item.location || "-";
+        const rawCategory = item.category || "ทั่วไป";
+        const rawStatus = item.status || "";
+
         const tab = getTab(item, now);
-        const catStyle = getCatBadgeStyle(item.category);
-        const accentColor = getAccentColor(item, status);
-        const catLabel = escapeHtml(item.category || "ทั่วไป");
-        const eventName = escapeHtml(item.event || "");
-        const location = escapeHtml(item.location || "");
-        const datetimeLabel = formatDatetime(item.datetime);
+        const statusInfo = formatStatus(rawStatus, rawDatetime, now);
+        const catStyle = getCatBadgeStyle(rawCategory);
+        const accentColor = getAccentColor(item, statusInfo);
+
+        const isCancelled = rawStatus.toLowerCase() === "cancelled";
+        const isPast = tab === "past";
+
+        // CSS classes bitmask
+        const cardClasses = [
+          "appointment-card",
+          isPast ? "is-past" : "",
+          isCancelled ? "is-cancelled" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        const catLabel = escapeHtml(rawCategory);
+        const eventName = escapeHtml(rawEvent);
+        const location = escapeHtml(rawLocation);
+        const datetimeLabel = formatDatetime(rawDatetime);
+
+        // Status badge: cancelled แสดงข้อความพิเศษ
+        const statusText = isCancelled ? "ยกเลิกแล้ว" : statusInfo.text;
+        const statusBg = isCancelled ? "#FFF1F2" : statusInfo.bg;
+        const statusCol = isCancelled ? "#E11D48" : statusInfo.color;
 
         return `
-  <div class="appointment-card"
+  <div class="${cardClasses}"
        data-tab="${tab}"
-       data-event="${escapeHtml(item.event || "").toLowerCase()}"
-       data-location="${escapeHtml(item.location || "").toLowerCase()}"
+       data-event="${escapeHtml(rawEvent).toLowerCase()}"
+       data-location="${escapeHtml(rawLocation).toLowerCase()}"
+       data-category="${escapeHtml(rawCategory)}"
+       data-datetime="${rawDatetime}"
        style="--accent-color: ${accentColor};"
        role="article">
 
@@ -771,8 +872,8 @@
         ${catLabel}
       </span>
       <span class="badge"
-            style="background:${status.bg}; color:${status.color};">
-        ${escapeHtml(status.text)}
+            style="background:${statusBg}; color:${statusCol};">
+        ${escapeHtml(statusText)}
       </span>
     </div>
 
@@ -786,7 +887,7 @@
         <span>${datetimeLabel}</span>
       </div>
       ${
-        location
+        location && location !== "-"
           ? `
       <div class="card-detail-row">
         <span class="card-detail-icon" aria-hidden="true">📍</span>
@@ -808,7 +909,10 @@
       }
 
       /* ─── Filter & Visibility ────────────────────────────────────── */
-      let activeTab = "pending"; // global state
+      let activeTab = "pending"; // global: 'pending' | 'past'
+      let activeCat = "ทั้งหมด"; // global: category pill selection
+
+      const HISTORY_DAYS = 60; // แสดงประวัติย้อนหลังสูงสุด 60 วัน
 
       function applyFilters() {
         const query = (document.getElementById("searchInput").value || "")
@@ -820,35 +924,76 @@
         const countEl = document.getElementById("sectionCount");
         const noRes = document.getElementById("noResults");
         const emptyEl = document.getElementById("emptyState");
+        const now = new Date();
+        const cutoff = new Date(now.getTime() - HISTORY_DAYS * 86400000); // 60 วันย้อนหลัง
 
         let visibleCount = 0;
+        let totalInTab = 0;
 
         cards.forEach((card) => {
           const tabMatch = card.dataset.tab === activeTab;
+          if (!tabMatch) {
+            card.style.display = "none";
+            return;
+          }
+          totalInTab++;
+
+          // ─ 60-day history limit สำหรับแท็บ "ผ่านไปแล้ว"
+          if (activeTab === "past") {
+            const rawDt = card.dataset.datetime;
+            if (rawDt) {
+              const dt = new Date(String(rawDt).replace(" ", "T"));
+              if (!isNaN(dt) && dt.getTime() < cutoff.getTime()) {
+                card.style.display = "none";
+                return; // เก่ากว่า 60 วัน → ซ่อน
+              }
+            }
+          }
+
+          // ─ Category filter
+          const catMatch =
+            activeCat === "ทั้งหมด" ||
+            (card.dataset.category || "").includes(activeCat);
+
+          // ─ Search filter
           const eventMatch = !query || card.dataset.event.includes(query);
           const locationMatch = !query || card.dataset.location.includes(query);
-          const show = tabMatch && (eventMatch || locationMatch);
+          const searchMatch = eventMatch || locationMatch;
+
+          const show = catMatch && searchMatch;
           card.style.display = show ? "" : "none";
           if (show) visibleCount++;
         });
 
-        // Total cards in this tab (regardless of search)
-        const totalInTab = cards.filter(
-          (c) => c.dataset.tab === activeTab,
-        ).length;
-
-        // Empty state: no data at all for this tab
+        // Empty state
         if (totalInTab === 0) {
           emptyEl.style.display = "flex";
           noRes.style.display = "none";
         } else {
           emptyEl.style.display = "none";
-          noRes.style.display = visibleCount === 0 && query ? "block" : "none";
+          const hasActiveFilter = query || activeCat !== "ทั้งหมด";
+          noRes.style.display =
+            visibleCount === 0 && hasActiveFilter ? "block" : "none";
         }
 
-        // Section count label
+        // Section count
         const label = activeTab === "pending" ? "กำลังมาถึง" : "ผ่านไปแล้ว";
-        countEl.textContent = `${label}: ${visibleCount} รายการ`;
+        const catSuffix = activeCat !== "ทั้งหมด" ? ` · ${activeCat}` : "";
+        countEl.textContent = `${label}${catSuffix}: ${visibleCount} รายการ`;
+      }
+
+      /* ─── Category Filter Init ───────────────────────────────────── */
+      function initCatFilter() {
+        document.querySelectorAll(".cat-pill").forEach((pill) => {
+          pill.addEventListener("click", () => {
+            document
+              .querySelectorAll(".cat-pill")
+              .forEach((p) => p.classList.remove("active"));
+            pill.classList.add("active");
+            activeCat = pill.dataset.cat || "ทั้งหมด";
+            applyFilters();
+          });
+        });
       }
 
       /* ─── Show / hide UI sections ────────────────────────────────── */
@@ -1019,6 +1164,7 @@
       (function init() {
         initTabs();
         initSearch();
+        initCatFilter(); // category pill bar
 
         if (isDev) {
           bootDev();
