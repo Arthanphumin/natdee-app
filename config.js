@@ -32,8 +32,8 @@ const CONFIG = Object.freeze({
    */
   API: {
     APPOINTMENTS:
-      "https://pay-wiley-whenever-reverse.trycloudflare.com/webhook/a3083faa-b717-4e24-b053-ce1bc7563a50",
+        "https://natdee.21missionboss.online/webhook/a3083faa-b717-4e24-b053-ce1bc7563a50",
     STATS:
-      "https://pay-wiley-whenever-reverse.trycloudflare.com/webhook/72fb0b75-69ec-4a82-9f8b-1f895eea30f2",
+        "https://natdee.21missionboss.online/webhook/72fb0b75-69ec-4a82-9f8b-1f895eea30f2",
   },
 });
