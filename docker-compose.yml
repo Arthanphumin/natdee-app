@@ -1,0 +1,76 @@
+name: NatDee-App
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      # ✏️  เปลี่ยน URL ที่นี่ → อัปเดต N8N_WEBHOOK_URL ใน .env
+      #    และตามไปเปลี่ยน natdee-app/config.js → CONFIG.API.*
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL}
+      - GENERIC_TIMEZONE=Asia/Bangkok
+      - TZ=Asia/Bangkok
+      - NODE_FUNCTION_ALLOW_BUILTIN=crypto,url,querystring,buffer
+      - EXECUTIONS_TIMEOUT=120
+      - EXECUTIONS_TIMEOUT_MAX=300
+    volumes:
+      - n8n_storage:/home/node/.n8n
+
+  mysql:
+    image: mysql:8.0
+    container_name: NatDee_mysql
+    restart: always
+    environment:
+      # ✏️  ค่าเหล่านี้ถูกดึงมาจาก .env
+      #    ถ้าเปลี่ยนค่า ต้องไปเปลี่ยนใน n8n Credentials (MySQL Node)
+      #    และในหน้าล็อคอิน phpMyAdmin ด้วย
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Bangkok
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: NatDee_phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared_tunnel
+    restart: unless-stopped
+    # ✏️  Token ดึงมาจาก .env → CLOUDFLARE_TUNNEL_TOKEN
+    #    วิธีดู Token: Cloudflare Dashboard → Zero Trust → Networks → Tunnels
+    #    → Configure → Regenerate Token (ถ้า Token เก่าถูก Expose ให้ Revoke ก่อน)
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - n8n
+
+volumes:
+  n8n_storage:
+    external: true
+    name: 21missionboss_n8n_storage
+  mysql_data:
+    external: true
+    name: 21missionboss_mysql_data

@@ -1,0 +1,2119 @@
+{
+  "name": "NatDee_Core",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line-webhook",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-1088, 880],
+      "id": "5e3b902b-b495-4bf7-95ef-5662ad395d1b",
+      "name": "Webhook",
+      "webhookId": "374f492d-6097-4d22-8c71-a5ceb403d1ec"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3.6-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3.6-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=คุณคือ \"นัดดี (NatDee)\" 🦉 ผู้ช่วยบันทึกกิจกรรมและตารางชีวิตอัจฉริยะ\nตอบกลับเป็น JSON Schema ที่ถูกต้องเท่านั้น ห้ามใส่ข้อความนอก JSON เด็ดขาด\n\n[เวลาปัจจุบันของระบบ]\n={{ $now.setZone('Asia/Bangkok').toFormat('yyyy-MM-dd HH:mm') }} (ปี ค.ศ.)\n\n[หน้าที่ของคุณ]\nวิเคราะห์ [ข้อความจากผู้ใช้] เพื่อจัดหมวดหมู่เจตนา (route) และสกัดข้อมูลตามกฎด้านล่าง\n\n[พจนานุกรมและการแปลงเวลาไทย (สำคัญมาก)]\n- แปลงภาษาพูดและตัวเลขทุกรูปแบบให้อยู่ในฟอร์แมต 24 ชั่วโมง (HH:mm) เสมอ:\n  • \"ครึ่ง\" = :30 (เช่น \"6 โมงครึ่ง\" = :30, \"บ่ายสามครึ่ง\" = 15:30)\n  • ตี: \"ตี 1\" - \"ตี 5\" = 01:00 - 05:00\n  • เช้า: \"6 โมงเช้า\" - \"11 โมงเช้า\" = 06:00 - 11:00\n  • เที่ยง: \"เที่ยง\" / \"เที่ยงวัน\" = 12:00, \"เที่ยงคืน\" = 00:00 (ของวันใหม่)\n  • บ่าย: \"บ่ายโมง\" = 13:00, \"บ่าย 2\" = 14:00, \"บ่าย 3\" = 15:00, \"บ่าย 4\" = 16:00\n  • เย็น: \"4 โมงเย็น\" = 16:00, \"5 โมงเย็น\" = 17:00, \"6 โมงเย็น\" = 18:00\n  • ทุ่ม: \"1 ทุ่ม\" = 19:00, \"2 ทุ่ม\" = 20:00, \"3 ทุ่ม\" = 21:00, \"4 ทุ่ม\" = 22:00, \"5 ทุ่ม\" = 23:00\n  • กรณีคำกำกวม เช่น \"6 โมง 30\", \"หกโมงครึ่ง\" โดยไม่ระบุเช้าหรือเย็น ให้ดูบริบทกิจกรรม (เช่น วิ่ง/ตื่นนอน = 06:30, นัดกินข้าว/สังสรรค์ = 18:30)\n  • คำระบุวัน: \"วันนี้\" = วันปัจจุบัน, \"พรุ่งนี้\" = วันปัจจุบัน + 1 วัน, \"มะรืนนี้\" = วันปัจจุบัน + 2 วัน\n\n[กฎการจำแนก Intent / Route]\n1. route = \"view_appointments\" (ขอดูตารางนัดทั้งหมด / เปิดดูนัดหมาย):\n   - เมื่อผู้ใช้พิมพ์: \"ขอดูตารางนัด\", \"ดูนัดหมาย\", \"มีนัดอะไรบ้าง\", \"เปิดดูนัด\", \"ตารางนัดทั้งหมด\", \"เช็กตาราง\", \"รายการนัด\"\n   - is_appointment = false, has_time = false\n   - reply_message = \"🦉 นัดดีเปิดตารางนัดหมายทั้งหมดให้แล้วครับ\"\n\n2. route = \"view_upcoming\" (ดูนัดที่ใกล้จะถึง / นัดต่อไป):\n   - เมื่อผู้ใช้พิมพ์: \"นัดต่อไป\", \"มีนัดอะไรเร็วๆ นี้ไหม\", \"นัดวันนี้\", \"นัดพรุ่งนี้\", \"นัดหมายที่กำลังจะมาถึง\"\n   - is_appointment = false, has_time = false\n   - reply_message = \"🦉 นี่คือนัดหมายที่ใกล้จะถึงของคุณครับ\"\n\n3. route = \"view_profile\" (ดูสถิติ / โปรไฟล์):\n   - เมื่อผู้ใช้พิมพ์: \"สถิติของฉัน\", \"ดูสถิติ\", \"โปรไฟล์\", \"ประวัติของฉัน\"\n\n4. route = \"view_help\" (วิธีใช้งาน):\n   - เมื่อผู้ใช้พิมพ์: \"วิธีใช้\", \"สอนใช้หน่อย\", \"ทำอะไรได้บ้าง\", \"ช่วยเหลือ\"\n\n5. route = \"นัดหมายใหม่\" (สร้างหรือบันทึกนัดหมายใหม่ - ต้องมีกิจกรรมและเวลาชัดเจน):\n   - เมื่อผู้ใช้ระบุกิจกรรมพร้อมวัน/เวลา เช่น \"พรุ่งนี้ 6 โมงครึ่ง วิ่งสวน\", \"19 ก.ย. 1 ทุ่ม กินเลี้ยงสาขา\", \"บ่ายสองมีสอบ\"\n   - has_time = true, is_appointment = true, is_duplicate = false\n   - event: ชื่อกิจกรรมหรือสิ่งที่ต้องทำ ตัดคำบอกเวลาออก\n   - datetime: วันเวลาเริ่ม (YYYY-MM-DD HH:mm) แปลงปี ค.ศ. และเวลาไทยให้ถูกต้อง หากไม่ระบุวันที่ให้ใช้วันปัจจุบัน\n   - endDatetime: วันเวลาสิ้นสุด บวกเพิ่ม 1 ชม. จาก datetime (YYYY-MM-DD HH:mm)\n   - location: สถานที่ (ถ้าไม่ระบุใส่ \"-\")\n   - category: เลือก 1 อย่างจาก ['ส่วนตัว', 'การเรียน', 'การทำงาน', 'สุขภาพ', 'สังสรรค์', 'ทั่วไป']\n   - reply_message: \"🦉 นัดดีสรุปข้อมูลนัดหมายให้แล้ว ตรวจทานก่อนกดยืนยันนะฮะ\"\n\n6. route = \"นัดซ้ำ\" (นัดหมายที่ซ้ำกับนัดเดิม):\n   - เมื่อผู้ใช้ระบุว่าเป็นนัดเดิมที่เคยพูดถึง\n   - has_time = true, is_appointment = true, is_duplicate = true\n\n7. route = \"คุยเล่นทั่วไป\" (นอกเรื่อง / ทักทาย / กวน / คุยเล่น / พิมพ์มั่ว / ขาดวันเวลาชัดเจน):\n   - ตอบสั้นๆ 1 ประโยคแบบน่ารัก สวมบทบาทนกฮูกนัดดี 🦉 แล้วตบท้ายชวนบันทึกนัดหมายเสมอ\n   - ตัวอย่างเช่น:\n     • ทักทาย -> \"ฮูกก! สวัสดีครับ มีกิจกรรมอะไรให้นัดดีช่วยจำ บอกเวลาและสิ่งที่ต้องทำมาได้เลยนะ 🦉✨\"\n     • คุยเล่น/นอกเรื่อง -> \"ฮูกก! นัดดีช่วยจำตารางชีวิตนะฮะ ถ้ามีนัดสำคัญพิมพ์บอกเวลาไว้ได้เลย นัดดีพร้อมจดเสมอ 🦉\"\n     • พิมพ์มั่ว/ไม่มีความหมาย -> \"ฮูกก! ฟังดูน่าสนใจนะฮะ แต่ถ้านึกธุระสำคัญออก พิมพ์บอกเวลาให้นัดดีช่วยบันทึกได้เลยนะ ✨\"\n   - has_time = false, is_appointment = false\n\n[JSON Structure ที่ต้องส่งออก]\n{\n  \"route\": \"string\",\n  \"has_time\": boolean,\n  \"is_appointment\": boolean,\n  \"is_duplicate\": boolean,\n  \"event\": \"string หรือ null\",\n  \"datetime\": \"string หรือ null\",\n  \"endDatetime\": \"string หรือ null\",\n  \"location\": \"string หรือ null\",\n  \"category\": \"string หรือ null\",\n  \"reply_message\": \"string\"\n}\n\n[ข้อความจากผู้ใช้]\n={{ $('Webhook').item.json.body.events[0].message.text }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [-128, 1920],
+      "id": "d7dc115c-12a4-48fe-a536-d563a20f6e37",
+      "name": "Message a model",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "maxTries": 4,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "pBMtsmhWQrpZxAUL",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer <Hide>"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "=json",
+        "bodyParameters": {
+          "parameters": [{}]
+        },
+        "jsonBody": "={\n  \"replyToken\": \"{{ $('Webhook').first().json.body.events[0].replyToken }}\",\n  \"messages\": [\n    {\n      \"type\": \"flex\",\n      \"altText\": \"📝 ตรวจทานนัดหมาย: {{ $('Timezone & Calendar Generator').first().json.event }}\",\n      \"contents\": {\n        \"type\": \"bubble\",\n        \"size\": \"mega\",\n        \"header\": {\n          \"type\": \"box\",\n          \"layout\": \"horizontal\",\n          \"backgroundColor\": \"#A85338\",\n          \"paddingAll\": \"16px\",\n          \"alignItems\": \"center\",\n          \"contents\": [\n            {\n              \"type\": \"box\",\n              \"layout\": \"horizontal\",\n              \"spacing\": \"sm\",\n              \"flex\": 4,\n              \"alignItems\": \"center\",\n              \"contents\": [\n                {\n                  \"type\": \"text\",\n                  \"text\": \"📝\",\n                  \"size\": \"md\",\n                  \"flex\": 0\n                },\n                {\n                  \"type\": \"text\",\n                  \"text\": \"ตรวจทานนัดหมาย\",\n                  \"weight\": \"bold\",\n                  \"color\": \"#FFFFFF\",\n                  \"size\": \"sm\",\n                  \"flex\": 1\n                }\n              ]\n            },\n            {\n              \"type\": \"box\",\n              \"layout\": \"vertical\",\n              \"backgroundColor\": \"#C46E52\",\n              \"cornerRadius\": \"md\",\n              \"paddingStart\": \"8px\",\n              \"paddingEnd\": \"8px\",\n              \"paddingTop\": \"3px\",\n              \"paddingBottom\": \"3px\",\n              \"flex\": 0,\n              \"contents\": [\n                {\n                  \"type\": \"text\",\n                  \"text\": \"{{ $('Timezone & Calendar Generator').first().json.category || 'ทั่วไป' }}\",\n                  \"color\": \"#FFFFFF\",\n                  \"size\": \"xxs\",\n                  \"weight\": \"bold\"\n                }\n              ]\n            }\n          ]\n        },\n        \"body\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"backgroundColor\": \"#FBFBFA\",\n          \"paddingAll\": \"20px\",\n          \"spacing\": \"lg\",\n          \"contents\": [\n            {\n              \"type\": \"text\",\n              \"text\": \"{{ $('Timezone & Calendar Generator').first().json.event }}\",\n              \"weight\": \"bold\",\n              \"size\": \"xl\",\n              \"color\": \"#1C241D\",\n              \"wrap\": true\n            },\n            {\n              \"type\": \"box\",\n              \"layout\": \"vertical\",\n              \"backgroundColor\": \"#FFFFFF\",\n              \"cornerRadius\": \"12px\",\n              \"paddingAll\": \"16px\",\n              \"spacing\": \"sm\",\n              \"borderColor\": \"#ECEAE4\",\n              \"borderWidth\": \"1px\",\n              \"contents\": [\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"horizontal\",\n                  \"spacing\": \"sm\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"📅\", \"size\": \"sm\", \"flex\": 1 },\n                    { \"type\": \"text\", \"text\": \"เวลานัด\", \"color\": \"#7E857F\", \"size\": \"xs\", \"flex\": 3 },\n                    { \"type\": \"text\", \"text\": \"{{ $('Timezone & Calendar Generator').first().json.datetime }} น.\", \"weight\": \"bold\", \"color\": \"#232A24\", \"size\": \"xs\", \"flex\": 8, \"wrap\": true }\n                  ]\n                },\n                {\n                  \"type\": \"separator\",\n                  \"color\": \"#F3F2EE\"\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"horizontal\",\n                  \"spacing\": \"sm\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"📍\", \"size\": \"sm\", \"flex\": 1 },\n                    { \"type\": \"text\", \"text\": \"สถานที่\", \"color\": \"#7E857F\", \"size\": \"xs\", \"flex\": 3 },\n                    { \"type\": \"text\", \"text\": \"{{ $('Timezone & Calendar Generator').first().json.location || '-' }}\", \"weight\": \"bold\", \"color\": \"#232A24\", \"size\": \"xs\", \"flex\": 8, \"wrap\": true }\n                  ]\n                }\n              ]\n            }\n          ]\n        },\n        \"footer\": {\n          \"type\": \"box\",\n          \"layout\": \"horizontal\",\n          \"backgroundColor\": \"#FBFBFA\",\n          \"paddingStart\": \"20px\",\n          \"paddingEnd\": \"20px\",\n          \"paddingBottom\": \"20px\",\n          \"spacing\": \"md\",\n          \"contents\": [\n            {\n              \"type\": \"button\",\n              \"style\": \"secondary\",\n              \"height\": \"sm\",\n              \"flex\": 1,\n              \"color\": \"#ECEAE4\",\n              \"action\": {\n                \"type\": \"postback\",\n                \"label\": \"ยกเลิก\",\n                \"data\": \"action=cancel_draft&eventId={{ $('Timezone & Calendar Generator').first().json.eventId }}\",\n                \"displayText\": \"ขอยกเลิกนัดนี้ครับ\"\n              }\n            },\n            {\n              \"type\": \"button\",\n              \"style\": \"primary\",\n              \"height\": \"sm\",\n              \"flex\": 2,\n              \"color\": \"#28382B\",\n              \"action\": {\n                \"type\": \"postback\",\n                \"label\": \"ยืนยันนัดหมาย\",\n                \"data\": \"action=confirm&eventId={{ $('Timezone & Calendar Generator').first().json.eventId }}\",\n                \"displayText\": \"ยืนยันบันทึกนัดหมายครับ\"\n              }\n            }\n          ]\n        }\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1600, 1872],
+      "id": "7d24b61e-67b8-493d-873d-f270aca5c1cf",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "D0iVHHYJIxKvMAd3",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first()?.json || {};\nconst webhookEvent = $('Webhook').item?.json?.body?.events?.[0] || {};\nconst userId = webhookEvent.source?.userId || '';\nconst replyToken = webhookEvent.replyToken || '';\nconst userMessage = (webhookEvent.message?.text || \"\").trim();\n\n// -------------------------------------------------------------\n// 1. ดักจับข้อความจาก Rich Menu หรือคีย์เวิร์ดตรงๆ\n// -------------------------------------------------------------\nif (userMessage.includes(\"ดูตารางนัด\") || userMessage.includes(\"นัดหมายทั้งหมด\") || userMessage.includes(\"ตารางนัด\") || userMessage.includes(\"เช็กนัด\")) {\n  return [{ json: { route: 'view_appointments', userId, replyToken } }];\n}\nif (userMessage.includes(\"นัดหมายที่กำลังจะมาถึง\") || userMessage.includes(\"นัดต่อไป\") || userMessage.includes(\"นัดเร็วๆ นี้\")) {\n  return [{ json: { route: 'view_upcoming', userId, replyToken } }];\n}\nif (userMessage.includes(\"บันทึกนัดใหม่\") || userMessage.includes(\"สร้างนัดใหม่\")) {\n  return [{ \n    json: { \n      route: 'new_prompt', \n      userId, \n      replyToken,\n      replyMessage: {\n        type: \"text\",\n        text: \"🦉 ฮูกก! อยากบันทึกนัดอะไร พิมพ์บอกเวลาและรายละเอียดมาได้เลยนะฮะ\\n\\n💡 ตัวอย่างเช่น:\\n- 'พรุ่งนี้ 9 โมง ประชุมกับเพื่อน'\\n- 'วันที่ 20 ก.ย. บ่ายโมง เข้าประชุมสาขา'\"\n      }\n    } \n  }];\n}\nif (userMessage.includes(\"สถิติของฉัน\") || userMessage.includes(\"ดูสถิติ\")) {\n  return [{ json: { route: 'view_profile', userId, replyToken } }];\n}\nif (userMessage.includes(\"วิธีใช้งาน\") || userMessage.includes(\"คู่มือ\")) {\n  return [{ json: { route: 'view_help', userId, replyToken } }];\n}\nif (userMessage.includes(\"ข้อมูลส่วนบุคคล\") || userMessage.includes(\"ตั้งค่า\")) {\n  return [{ json: { route: 'view_settings', userId, replyToken } }];\n}\n\n// -------------------------------------------------------------\n// 2. ถอดรหัส JSON จาก AI Gemini\n// -------------------------------------------------------------\nlet textToParse = raw.text || raw.content?.parts?.[0]?.text || raw.response?.text || (typeof raw === 'string' ? raw : JSON.stringify(raw));\n\nlet aiData = {};\ntry {\n  const cleanText = textToParse.replace(/```json/gi, '').replace(/```/g, '').trim();\n  aiData = JSON.parse(cleanText);\n} catch (e) {\n  aiData = { \n    route: \"chat\", \n    is_appointment: false, \n    reply_message: \"ฮูกก! นัดดีอ่านข้อความนี้ไม่ค่อยเข้าใจ ลองพิมพ์บอกเวลาและกิจกรรมใหม่อีกทีนะ 🦉\" \n  };\n}\n\n// -------------------------------------------------------------\n// 3. กระจายงานตาม Route ทั่วไป\n// -------------------------------------------------------------\nif (aiData.route === 'view_appointments') return [{ json: { route: 'view_appointments', userId, replyToken } }];\nif (aiData.route === 'view_upcoming') return [{ json: { route: 'view_upcoming', userId, replyToken } }];\nif (aiData.route === 'view_profile') return [{ json: { route: 'view_profile', userId, replyToken } }];\nif (aiData.route === 'view_help') return [{ json: { route: 'view_help', userId, replyToken } }];\nif (aiData.route === 'view_settings') return [{ json: { route: 'view_settings', userId, replyToken } }];\n\n// ตรวจสอบความสมบูรณ์ของนัดหมาย\nconst eventTitle = String(aiData.event || aiData.title || \"\").trim();\nconst dt = String(aiData.datetime || aiData.dateTime || \"\").trim();\nconst isValidSchedule = Boolean(aiData.is_appointment && dt && dt.length >= 10 && eventTitle);\n\n// เคส: นัดหมายเดิม/ซ้ำ\nif (aiData.route === 'นัดซ้ำ' || aiData.is_duplicate === true) {\n  return [{\n    json: {\n      route: 'duplicate',\n      userId: userId,\n      replyToken: replyToken,\n      replyMessage: {\n        type: \"text\",\n        text: `⚠️ ฮูกก! นัดหมาย \"${eventTitle}\" ในเวลา ${dt} น. คุณเคยบันทึกไว้ในระบบแล้วนะฮะ 🦉✨`\n      }\n    }\n  }];\n}\n\n// เคส: คุยเล่น / พิมพ์มั่ว / ข้อมูลไม่ครบ -> แนบ Quick Reply ดึงกลับเข้าสู่ Flow\nif (!isValidSchedule) {\n  return [{\n    json: {\n      route: 'chat',\n      userId: userId,\n      replyToken: replyToken,\n      replyMessage: {\n        type: \"text\",\n        text: aiData.reply_message || \"🦉 ฮูกก! นัดดีช่วยบันทึกกิจกรรมและเตือนความจำนะฮะ ถ้ามีธุระพิมพ์บอกเวลาและสิ่งที่ต้องทำมาได้เลยน้า ✨\",\n        quickReply: {\n          items: [\n            {\n              type: \"action\",\n              action: {\n                type: \"uri\",\n                label: \"📅 เปิดตารางนัด\",\n                uri: \"https://liff.line.me/2011350023-z3qS09LJ\"\n              }\n            },\n            {\n              type: \"action\",\n              action: {\n                type: \"uri\",\n                label: \"💡 วิธีใช้งาน\",\n                uri: \"https://liff.line.me/2011350023-m6M2rxLv\"\n              }\n            },\n            {\n              type: \"action\",\n              action: {\n                type: \"message\",\n                label: \"✍️ บันทึกนัดหมายใหม่\",\n                text: \"บันทึกนัดหมายใหม่\"\n              }\n            }\n          ]\n        }\n      }\n    }\n  }];\n}\n\n// -------------------------------------------------------------\n// 4. สกัดนัดหมายสำเร็จ -> ส่งต่อข้อมูลดิบให้ Timezone Generator ทันที\n// -------------------------------------------------------------\nreturn [{\n  json: {\n    route: 'new',\n    userId: userId,\n    replyToken: replyToken,\n    event: eventTitle,\n    datetime: dt,\n    endDatetime: String(aiData.endDatetime || dt).trim(),\n    location: String(aiData.location && aiData.location !== '-' ? aiData.location : '-').trim(),\n    category: String(aiData.category || 'ทั่วไป').trim()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [208, 1920],
+      "id": "2f9d163f-83ab-43e7-ac96-239c87c3dd17",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.events[0].message.text }}",
+                    "rightValue": "🗓️ ดูตารางนัดทั้งหมด",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "6be89c1e-bc6a-4626-af06-22b6c19d00be"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7cf59409-9ceb-4f41-a42f-30261ea6df58",
+                    "leftValue": "={{ $json.body.events[0].type }}",
+                    "rightValue": "postback",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9bbe8706-d0ff-4e70-8d9b-c454ab48015a",
+                    "leftValue": "={{ $json.body.events[0].message.text }}",
+                    "rightValue": "☀️ นัดหมายวันนี้",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "445961da-6a41-4288-b193-f7ddfcb7336a",
+                    "leftValue": "={{ $json.body.events[0].message.text }}",
+                    "rightValue": "(วิธี|ใช้ยัง|ทำอะไร|สอน|ช่วย|คู่มือ|ทำไรได้|help)",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "help"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9653fb69-ab8e-4d54-a513-77524a57ec59",
+                    "leftValue": "={{ $json.body.events[0].message.text }}",
+                    "rightValue": "(บันทึกนัดใหม่|สร้างนัดใหม่|ลงนัดใหม่)",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "new_prompt"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "83b3eaf2-db0a-4116-a52c-d9a4aada73a4",
+                    "leftValue": "={{ $json.body.events[0].type }}",
+                    "rightValue": "message",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [-896, 832],
+      "id": "63047659-35e3-49df-a90d-d6f480591436",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $json.body?.events?.[0] || {};\nconst postback = event.postback || {};\nconst dataStr = postback.data || '';\n\n// แยก Query String ด้วย JavaScript พื้นฐาน\nconst params = {};\nif (dataStr) {\n  dataStr.split('&').forEach(pair => {\n    const [key, val] = pair.split('=');\n    if (key) params[key] = decodeURIComponent(val || '');\n  });\n}\n\n// ดึงเวลาใหม่กรณีเป็นการกดเลื่อนนัดหมาย (datetimepicker)\nlet newDatetime = null;\nif (postback.params && postback.params.datetime) {\n  newDatetime = postback.params.datetime.replace('T', ' ');\n}\n\nreturn [{\n  json: {\n    action: params.action || '',\n    eventId: params.eventId || '',\n    newDatetime: newDatetime,\n    replyToken: event.replyToken,\n    userId: event.source?.userId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-80, -32],
+      "id": "6391a9ac-a3f1-448d-9ec3-430e9dab67f4",
+      "name": "Parse Postback Data"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "cancel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "3819dcba-18fc-4705-b39b-b54ea871e0ab"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cancel"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "68e54ea9-9db2-4b25-80b7-1a0df43f2cde",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "reschedule",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "reschedule"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0d88dd2b-5dbb-4bef-8484-2c27b0351f67",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "confirm",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "confirm"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "556edbfd-dd22-491f-8877-c44a9b22c337",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "cancel_draft",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cancel_draft"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [128, -16],
+      "id": "8a95ac1f-1d67-4ae9-b696-aec83903c0bf",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <Hide>"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[\n  {\n    \"type\": \"text\",\n    \"text\": \"❌ ฮูกก! นัดดีลบนัดหมายและยกเลิกออกจากปฏิทินให้เรียบร้อยแล้วครับ 🦉🍃\"\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [960, -32],
+      "id": "0565f95a-c508-4e97-b627-a0fce7408de8",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <Hide>"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[\n  {\n    \"type\": \"text\",\n    \"text\": \"⏰ ฮูกก! นัดดีขยับเวลานัดหมายให้ใหม่แล้วครับ 🦉✨\\n\\n📅 นัดใหม่: {{ $('Parse Postback Data').item.json.newDatetime }} น.\\n\\nถึงเวลาแล้วเดี๋ยวนัดดีบินมาสะกิดเตือนแน่นอนครับ 🚀\"\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1152, 400],
+      "id": "2819ae72-edd4-4c8a-a60b-b40d18d7f653",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO appointments (\n  userId, \n  event, \n  datetime, \n  location, \n  category, \n  status, \n  eventId\n)\nVALUES (\n  '{{ String($json.userId || '').replace(/'/g, \"\\\\'\") }}',\n  '{{ String($json.event || '').replace(/'/g, \"\\\\'\") }}',\n  '{{ String($json.datetime || '') }}',\n  '{{ String($json.location || '-').replace(/'/g, \"\\\\'\") }}',\n  '{{ String($json.category || 'ทั่วไป').replace(/'/g, \"\\\\'\") }}',\n  'draft',\n  '{{ String($json.eventId || '') }}'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [1216, 1872],
+      "id": "4936259e-4c25-4759-9b7c-60d5aa66436c",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE appointments \nSET status = 'cancelled' \nWHERE eventId = '{{ $('Parse Postback Data').first().json.eventId }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [576, -32],
+      "id": "e410f488-8236-4b52-82c5-d1e4340645d8",
+      "name": "Execute a SQL query1",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE appointments \nSET datetime = '{{ $('Parse Postback Data').first().json.newDatetime }}', status = 'pending' \nWHERE eventId = '{{ $('Parse Postback Data').first().json.eventId }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [768, 400],
+      "id": "fd2381c6-d338-4c13-ace3-6ab7aead1cd9",
+      "name": "Execute a SQL query2",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, userId, event, DATE_FORMAT(datetime, '%Y-%m-%d %H:%i') AS datetime, location, status, eventId \nFROM appointments \nWHERE userId = '{{ $('Webhook').first().json.body.events[0].source.userId }}' \n  AND status NOT IN ('done', 'cancelled') \n  AND datetime >= NOW() - INTERVAL 10 MINUTE\nORDER BY datetime ASC \nLIMIT 10;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [-80, -672],
+      "id": "f447fee3-993a-41a0-9011-4b1a59ecb9a7",
+      "name": "Execute a SQL query3",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\n\nif (rows.length === 0) {\n  return [{\n    json: {\n      replyToken: $('Webhook').item.json.body.events[0].replyToken,\n      flexMessage: {\n        type: \"text\",\n        text: \"ฮูกก! ตรวจดูแล้ว ช่วงนี้ไม่มีนัดหมายค้างอยู่เลยครับ ว่างยาวๆ พักผ่อนได้เต็มที่ 🦉🍃\"\n      }\n    }\n  }];\n}\n\nconst now = new Date();\nconst bangkokNowISO = new Date(now.getTime() + (7 * 60 * 60 * 1000)).toISOString().slice(0, 16);\n\nconst bubbles = rows.slice(0, 10).map(row => {\n  const locationQuery = (row.location && row.location !== '-') ? encodeURIComponent(row.location) : encodeURIComponent(row.event);\n  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${locationQuery}`;\n\n  return {\n    type: \"bubble\",\n    size: \"micro\",\n    header: {\n      type: \"box\",\n      layout: \"vertical\",\n      backgroundColor: \"#4A5D4E\",\n      paddingAll: \"10px\",\n      contents: [\n        {\n          type: \"text\",\n          text: `🦉 ${row.category || 'ทั่วไป'}`,\n          weight: \"bold\",\n          color: \"#FFFFFF\",\n          size: \"xxs\"\n        }\n      ]\n    },\n    body: {\n      type: \"box\",\n      layout: \"vertical\",\n      paddingAll: \"12px\",\n      spacing: \"xs\",\n      contents: [\n        {\n          type: \"text\",\n          text: row.event,\n          weight: \"bold\",\n          size: \"sm\",\n          color: \"#1F2D0F\",\n          wrap: true\n        },\n        {\n          type: \"text\",\n          text: `📅 ${row.datetime} น.`,\n          size: \"xxs\",\n          color: \"#666666\",\n          wrap: true\n        },\n        {\n          type: \"text\",\n          text: `📍 ${row.location || '-'}`,\n          size: \"xxs\",\n          color: \"#888888\",\n          wrap: true\n        }\n      ]\n    },\n    footer: {\n      type: \"box\",\n      layout: \"vertical\",\n      spacing: \"xs\",\n      paddingAll: \"8px\",\n      contents: [\n        {\n          type: \"button\",\n          style: \"primary\",\n          height: \"sm\",\n          color: \"#C86D51\",\n          action: {\n            type: \"uri\",\n            label: \"🗺️ แผนที่\",\n            uri: mapsUrl\n          }\n        },\n        {\n          type: \"button\",\n          style: \"secondary\",\n          height: \"sm\",\n          action: {\n            type: \"datetimepicker\",\n            label: \"⏰ เลื่อนนัด\",\n            data: `action=reschedule&eventId=${row.eventId || ''}`,\n            mode: \"datetime\",\n            min: bangkokNowISO\n          }\n        },\n        {\n          type: \"button\",\n          style: \"secondary\",\n          height: \"sm\",\n          action: {\n            type: \"postback\",\n            label: \"❌ ยกเลิก\",\n            data: `action=cancel&eventId=${row.eventId || ''}`,\n            displayText: \"ขอยกเลิกนัดหมายนี้ครับ\"\n          }\n        }\n      ]\n    }\n  };\n});\n\nreturn [{\n  json: {\n    replyToken: $('Webhook').item.json.body.events[0].replyToken,\n    flexMessage: {\n      type: \"flex\",\n      altText: \"🦉 ตารางนัดหมายทั้งหมดของคุณ\",\n      contents: {\n        type: \"carousel\",\n        contents: bubbles\n      }\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [128, -672],
+      "id": "9ca2066f-11bc-4597-a7fe-e3e0f79f3087",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $json.replyToken }}\",\n  \"messages\": {{ JSON.stringify($json.messages) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [336, -672],
+      "id": "0784027d-4a83-4d85-9782-83389dc6f845",
+      "name": "HTTP Request3",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "D0iVHHYJIxKvMAd3",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO appointment_logs (appointment_id, userId, action, new_datetime, remark)\nSELECT id, userId, 'CREATED', datetime, 'สร้างนัดหมายใหม่ (ระบบ Calendar Link)'\nFROM appointments\nWHERE eventId = '{{ $json.eventId }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [1408, 1872],
+      "id": "3ad9fdbb-cdb8-4227-8341-3db27c14e779",
+      "name": "Log Create",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO appointment_logs (appointment_id, userId, action, old_datetime, new_datetime, remark)\nSELECT id, userId, 'RESCHEDULED', datetime, '{{ $('Parse Postback Data').item.json.newDatetime }}', 'เลื่อนนัดหมายผ่าน LINE'\nFROM appointments\nWHERE eventId = '{{ $('Parse Postback Data').item.json.eventId }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [960, 400],
+      "id": "6eee727f-50d2-4314-9652-84ae7119cdd9",
+      "name": "Log Reschedule",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO appointment_logs (appointment_id, userId, action, old_datetime, remark)\nSELECT id, userId, 'CANCELLED', datetime, 'กดยกเลิกนัดหมายผ่าน LINE'\nFROM appointments\nWHERE eventId = '{{ $('Parse Postback Data').item.json.eventId }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [768, -32],
+      "id": "51c51be4-78ed-4646-8eb1-fecde83961db",
+      "name": "Log Cancel",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM appointments\nWHERE userId = '{{ $('Webhook').item.json.body.events[0].source.userId }}'\n  AND status != 'cancelled'\n  AND DATE(datetime) = CURDATE()\nORDER BY datetime ASC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [-80, 736],
+      "id": "23bb929e-4250-42f6-9437-422c80af3953",
+      "name": "Get Today Appointments",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\n\nif (rows.length === 0) {\n  return [{\n    json: {\n      replyToken: $('Webhook').item.json.body.events[0].replyToken,\n      flexMessage: {\n        type: \"text\",\n        text: \"ฮูกก! วันนี้ไม่มีนัดหมายเลยครับ สบายใจได้ พักผ่อนเต็มที่เลยนะ 🦉🍃\"\n      }\n    }\n  }];\n}\n\nconst now = new Date();\nconst bangkokNowISO = new Date(now.getTime() + (7 * 60 * 60 * 1000)).toISOString().slice(0, 16);\n\nconst bubbles = rows.slice(0, 10).map(row => {\n  const locationQuery = (row.location && row.location !== '-') ? encodeURIComponent(row.location) : encodeURIComponent(row.event);\n  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${locationQuery}`;\n\n  return {\n    type: \"bubble\",\n    size: \"micro\",\n    header: {\n      type: \"box\",\n      layout: \"vertical\",\n      backgroundColor: \"#4A5D4E\",\n      paddingAll: \"10px\",\n      contents: [\n        {\n          type: \"text\",\n          text: `🦉 ${row.category || 'ทั่วไป'} (วันนี้)`,\n          weight: \"bold\",\n          color: \"#FFFFFF\",\n          size: \"xxs\"\n        }\n      ]\n    },\n    body: {\n      type: \"box\",\n      layout: \"vertical\",\n      paddingAll: \"12px\",\n      spacing: \"xs\",\n      contents: [\n        {\n          type: \"text\",\n          text: row.event,\n          weight: \"bold\",\n          size: \"sm\",\n          color: \"#1F2D0F\",\n          wrap: true\n        },\n        {\n          type: \"text\",\n          text: `📅 ${row.datetime.slice(11, 16)} น.`,\n          size: \"xxs\",\n          color: \"#666666\",\n          wrap: true\n        },\n        {\n          type: \"text\",\n          text: `📍 ${row.location || '-'}`,\n          size: \"xxs\",\n          color: \"#888888\",\n          wrap: true\n        }\n      ]\n    },\n    footer: {\n      type: \"box\",\n      layout: \"vertical\",\n      spacing: \"xs\",\n      paddingAll: \"8px\",\n      contents: [\n        {\n          type: \"button\",\n          style: \"primary\",\n          height: \"sm\",\n          color: \"#C86D51\",\n          action: {\n            type: \"uri\",\n            label: \"🗺️ แผนที่\",\n            uri: mapsUrl\n          }\n        },\n        {\n          type: \"button\",\n          style: \"secondary\",\n          height: \"sm\",\n          action: {\n            type: \"datetimepicker\",\n            label: \"⏰ เลื่อนนัด\",\n            data: `action=reschedule&eventId=${row.eventId || ''}`,\n            mode: \"datetime\",\n            min: bangkokNowISO\n          }\n        },\n        {\n          type: \"button\",\n          style: \"secondary\",\n          height: \"sm\",\n          action: {\n            type: \"postback\",\n            label: \"❌ ยกเลิก\",\n            data: `action=cancel&eventId=${row.eventId || ''}`,\n            displayText: \"ขอยกเลิกนัดหมายนี้ครับ\"\n          }\n        }\n      ]\n    }\n  };\n});\n\nreturn [{\n  json: {\n    replyToken: $('Webhook').item.json.body.events[0].replyToken,\n    flexMessage: {\n      type: \"flex\",\n      altText: \"🦉 สรุปนัดหมายวันนี้ของคุณ\",\n      contents: {\n        type: \"carousel\",\n        contents: bubbles\n      }\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [144, 736],
+      "id": "705ca80f-4b9f-442a-b235-34f664d39c25",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": \"={{ $json.replyToken }}\",\n  \"messages\": [\n    \"={{ $json.flexMessage }}\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [384, 736],
+      "id": "01438cf5-50f5-4d7b-a43a-869a6236516e",
+      "name": "HTTP Request4",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "D0iVHHYJIxKvMAd3",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $json.replyToken }}\",\n  \"messages\": [\n    {{ JSON.stringify($json.replyMessage) }}\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [2000, 3040],
+      "id": "fe93cbb6-5140-4426-af6d-51f82af58f93",
+      "name": "HTTP Request5",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "D0iVHHYJIxKvMAd3",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.line.me/v2/bot/profile/{{ $('Code in JavaScript').item.json.userId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1888, 1872],
+      "id": "e6775536-0b07-4d93-9f36-00f5c388a728",
+      "name": "Get LINE Profile",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "D0iVHHYJIxKvMAd3",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO users (\n  userId,\n  display_name,\n  picture_url,\n  total_created,\n  total_rescheduled,\n  total_cancelled,\n  registered_at,\n  last_active\n)\nVALUES (\n  '{{ $json.userId }}',\n  '{{ $json.displayName ? $json.displayName.replace(/'/g, \"\\\\'\") : \"LINE User\" }}',\n  '{{ $json.pictureUrl || \"\" }}',\n  1,\n  0,\n  0,\n  NOW(),\n  NOW()\n)\nON DUPLICATE KEY UPDATE\n  display_name = VALUES(display_name),\n  picture_url = VALUES(picture_url),\n  total_created = total_created + 1,\n  last_active = NOW();",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [2032, 1872],
+      "id": "d765bda8-07cc-4480-ba84-0a3583fd5240",
+      "name": "Upsert Users",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE users\nSET \n  total_rescheduled = total_rescheduled + 1,\n  last_active = NOW()\nWHERE userId = '{{ $('Parse Postback Data').item.json.userId }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [1568, 400],
+      "id": "05edc37e-125c-4f11-bfdc-30942b4eef84",
+      "name": "Update User Reschedule",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE users\nSET \n  total_cancelled = total_cancelled + 1,\n  last_active = NOW()\nWHERE userId = '{{ $('Parse Postback Data').item.json.userId }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [1568, -32],
+      "id": "347a5889-7781-499b-940c-44b61f42ffb9",
+      "name": "Update User Cancel",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "new",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "faeabc93-5a8a-4b7f-b997-5f29f9144cd6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "นัดหมายใหม่"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "64cb32e1-86b7-4342-96dd-684d4a6c85ef",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "duplicate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "นัดซ้ำ"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0d88f246-1acb-4fff-bbdb-be2e7abde522",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "view_upcoming",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "view_upcoming"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f96ef408-72f5-449a-9985-9f732405aaf3",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "view_appointments",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "view_appointments"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6f757dfc-44a2-430f-bc43-58976d413b7e",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "view_profile",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "view_profile"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d966d803-5d67-4404-93de-600be9888bc9",
+                    "leftValue": "",
+                    "rightValue": "view_settings",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "view_settings"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "717e19b1-672b-4152-803b-9d19dcc89807",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "view_help",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "view_help"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4069f36c-a5a2-4e31-9d35-f7c05cb34e39",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "chat",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "คุยเล่นทั่วไป"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [464, 1904],
+      "id": "78943cfd-4c83-423a-b1b1-e36349ba8eef",
+      "name": "Switch2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $('Webhook').item.json.body.events[0].replyToken }}\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"⚠️ ฮูกก! นัดหมายนี้คุณเคยบันทึกไว้ในระบบแล้วนะฮะ 🦉\\n\\n📌 กิจกรรม: {{ $json.event }}\\n📅 เวลา: {{ $json.datetime }} น.\\n\\nสามารถกดดูตารางนัดทั้งหมดได้ที่เมนูด้านล่างเลยครับ ✨\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1216, 2064],
+      "id": "523dd5b0-d8a7-4403-b823-975b9cdcc842",
+      "name": "HTTP Request6",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "D0iVHHYJIxKvMAd3",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  id,\n  userId,\n  event,\n  DATE_FORMAT(datetime, '%Y-%m-%d %H:%i') AS datetime,\n  location,\n  category,\n  status,\n  eventId\nFROM appointments\nWHERE userId = '{{ $('Webhook').first().json.body.events[0].source.userId }}'\n  AND status IN ('pending', 'confirmed')\n  AND datetime >= NOW()\nORDER BY datetime ASC\nLIMIT 10;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [1424, 2272],
+      "id": "423b35f9-2468-41ce-9156-28119f5a8731",
+      "name": "view_upcoming",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $('view_upcoming').all();\nconst webhookEvent = $('Webhook').item?.json?.body?.events?.[0] || {};\nconst replyToken = webhookEvent.replyToken || '';\nconst now = new Date();\n\n// กรณีไม่พบนัดหมายที่กำลังจะมาถึง\nif (!items || items.length === 0 || !items[0].json?.event) {\n  return [{\n    json: {\n      replyToken: replyToken,\n      messages: [\n        {\n          type: \"text\",\n          text: \"🦉 ฮูกก! ตอนนี้คุณยังไม่มีนัดหมายที่กำลังจะมาถึงเลยครับ พักผ่อนให้สบายใจได้เลย ✨\"\n        }\n      ]\n    }\n  }];\n}\n\n// ฟังก์ชันตัดแต่ง String วันเวลา ป้องกันเวลาเพี้ยน\nfunction formatCleanDateTime(dtVal) {\n  if (!dtVal) return '-';\n  const str = String(dtVal).replace('T', ' ').trim();\n  return str.substring(0, 16); // ได้ 'YYYY-MM-DD HH:mm' แน่นอน\n}\n\n// ฟังก์ชันคำนวณสถานะ / เวลานับถอยหลัง (ล็อกเขตเวลาไทย +07:00)\nfunction formatStatus(status, datetimeStr) {\n  if (status === 'done') {\n    return { text: 'เสร็จสิ้น', badgeBg: '#E0E0E0', textColor: '#666666' };\n  }\n  \n  if (!datetimeStr) {\n    return { text: status || 'รอดำเนินการ', badgeBg: '#E8F5E9', textColor: '#2E7D32' };\n  }\n\n  // แปลงให้เป็น Date Object แบบล็อกเวลาไทย (+07:00) ชัดเจน\n  const cleanStr = formatCleanDateTime(datetimeStr).replace(' ', 'T');\n  const targetDate = new Date(`${cleanStr}:00+07:00`);\n  const diffMs = targetDate.getTime() - now.getTime();\n\n  if (isNaN(diffMs)) {\n    return { text: status || 'active', badgeBg: '#E8F5E9', textColor: '#2E7D32' };\n  }\n\n  if (diffMs < 0) {\n    return { text: 'เลยเวลานัดแล้ว', badgeBg: '#F3F4F6', textColor: '#9CA3AF' };\n  }\n\n  const diffMinutes = Math.floor(diffMs / (1000 * 60));\n  const diffHours = Math.floor(diffMinutes / 60);\n  const diffDays = Math.floor(diffHours / 24);\n\n  let timeText = '';\n  if (diffDays > 0) {\n    const remainHours = diffHours % 24;\n    timeText = `อีก ${diffDays} วัน ${remainHours > 0 ? remainHours + ' ชม.' : ''}`;\n  } else if (diffHours > 0) {\n    const remainMins = diffMinutes % 60;\n    timeText = `อีก ${diffHours} ชม. ${remainMins > 0 ? remainMins + ' น.' : ''}`;\n  } else {\n    timeText = `อีก ${Math.max(1, diffMinutes)} นาที`;\n  }\n\n  return { text: timeText, badgeBg: '#E8F5E9', textColor: '#2E7D32' };\n}\n\n// สร้างการ์ด Carousel สูงสุด 10 รายการตามข้อกำหนดของ LINE\nconst bubbles = items.slice(0, 10).map(item => {\n  const data = item.json;\n  const displayDateTime = formatCleanDateTime(data.datetime);\n  const statusInfo = formatStatus(data.status, displayDateTime);\n  const loc = data.location && data.location !== '-' ? data.location : '-';\n  const locQuery = (loc !== '-') ? encodeURIComponent(loc) : encodeURIComponent(data.event || '');\n  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${locQuery}`;\n\n  return {\n    type: \"bubble\",\n    size: \"kilo\",\n    header: {\n      type: \"box\",\n      layout: \"horizontal\",\n      backgroundColor: \"#28382B\",\n      paddingAll: \"12px\",\n      alignItems: \"center\",\n      contents: [\n        {\n          type: \"text\",\n          text: `📌 ${data.category || 'ทั่วไป'}`,\n          color: \"#FFFFFF\",\n          size: \"xs\",\n          weight: \"bold\",\n          flex: 1\n        },\n        {\n          type: \"box\",\n          layout: \"vertical\",\n          backgroundColor: statusInfo.badgeBg,\n          cornerRadius: \"md\",\n          paddingStart: \"8px\",\n          paddingEnd: \"8px\",\n          paddingTop\": \"3px\",\n          paddingBottom\": \"3px\",\n          contents: [\n            {\n              type: \"text\",\n              text: statusInfo.text,\n              color: statusInfo.textColor,\n              size: \"xxs\",\n              weight: \"bold\",\n              align: \"center\"\n            }\n          ]\n        }\n      ]\n    },\n    body: {\n      type: \"box\",\n      layout: \"vertical\",\n      spacing: \"md\",\n      paddingAll: \"16px\",\n      backgroundColor: \"#FFFFFF\",\n      contents: [\n        {\n          type: \"text\",\n          text: data.event || '-',\n          weight: \"bold\",\n          size: \"md\",\n          color: \"#1C241D\",\n          wrap: true\n        },\n        {\n          type: \"separator\",\n          color: \"#ECEAE4\"\n        },\n        {\n          type: \"box\",\n          layout: \"vertical\",\n          spacing: \"xs\",\n          contents: [\n            {\n              type: \"box\",\n              layout: \"baseline\",\n              spacing: \"sm\",\n              contents: [\n                { type: \"text\", text: \"📅\", size: \"xs\", flex: 1 },\n                { type: \"text\", text: \"เวลา\", color: \"#7E857F\", size: \"xs\", flex: 2 },\n                { type: \"text\", text: `${displayDateTime} น.`, weight: \"bold\", color: \"#232A24\", size: \"xs\", flex: 7, wrap: true }\n              ]\n            },\n            {\n              type: \"box\",\n              layout: \"baseline\",\n              spacing: \"sm\",\n              contents: [\n                { type: \"text\", text: \"📍\", size: \"xs\", flex: 1 },\n                { type: \"text\", text: \"สถานที่\", color: \"#7E857F\", size: \"xs\", flex: 2 },\n                { type: \"text\", text: loc, weight: \"bold\", color: \"#232A24\", size: \"xs\", flex: 7, wrap: true }\n              ]\n            }\n          ]\n        }\n      ]\n    },\n    footer: {\n      type: \"box\",\n      layout: \"horizontal\",\n      paddingAll: \"10px\",\n      spacing: \"sm\",\n      backgroundColor: \"#FBFBFA\",\n      contents: [\n        {\n          type: \"button\",\n          style: \"primary\",\n          height: \"sm\",\n          flex: 1,\n          color: \"#28382B\",\n          action: {\n            type: \"uri\",\n            label: \"🗺️ แผนที่\",\n            uri: mapsUrl\n          }\n        },\n        {\n          type: \"button\",\n          style: \"secondary\",\n          height: \"sm\",\n          flex: 1,\n          color: \"#EFECE6\",\n          action: {\n            type: \"uri\",\n            label: \"📋 ดูในแอป\",\n            uri: \"https://liff.line.me/2011350023-z3qS09LJ\"\n          }\n        }\n      ]\n    }\n  };\n});\n\nreturn [{\n  json: {\n    replyToken: replyToken,\n    messages: [\n      {\n        type: \"flex\",\n        altText: \"🦉 นัดหมายที่กำลังจะมาถึงของคุณ\",\n        contents: {\n          type: \"carousel\",\n          contents: bubbles\n        }\n      }\n    ]\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1616, 2272],
+      "id": "d2e6b547-9392-4dab-9bb8-c0fc22801118",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1808, 2272],
+      "id": "8a73414f-88e4-48e0-aefa-355440340a33",
+      "name": "HTTP Request7",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "D0iVHHYJIxKvMAd3",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO user_events (userId, event_name, event_target, metadata)\nVALUES ('{{ $json.sub }}', 'page_view', 'appointments_page', '{\"platform\": \"liff\"}');",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [-848, 2864],
+      "id": "5274cea8-21fa-4d0f-a03e-0e72e0756d95",
+      "name": "LIFFLog",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <Hide>"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $('Webhook').first().json.body.events[0].replyToken }}\",\n  \"messages\": [\n    {\n      \"type\": \"flex\",\n      \"altText\": \"เปิดดูตารางนัดหมายทั้งหมด 🦉\",\n      \"contents\": {\n        \"type\": \"bubble\",\n        \"size\": \"kilo\",\n        \"header\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"backgroundColor\": \"#4A5D4E\",\n          \"paddingAll\": \"15px\",\n          \"contents\": [\n            {\n              \"type\": \"text\",\n              \"text\": \"🦉 นัดดี (NatDee)\",\n              \"weight\": \"bold\",\n              \"color\": \"#FFFFFF\",\n              \"size\": \"sm\"\n            },\n            {\n              \"type\": \"text\",\n              \"text\": \"ตารางนัดหมายทั้งหมดของคุณ\",\n              \"color\": \"#E5E5E5\",\n              \"size\": \"xs\",\n              \"margin\": \"xs\"\n            }\n          ]\n        },\n        \"body\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"backgroundColor\": \"#F8F7F4\",\n          \"paddingAll\": \"15px\",\n          \"contents\": [\n            {\n              \"type\": \"text\",\n              \"text\": \"กดปุ่มด้านล่างเพื่อเปิดดูรายการนัดหมาย คัดกรองหมวดหมู่ และเช็กเวลานับถอยหลังได้เลยครับ 👇\",\n              \"size\": \"xs\",\n              \"color\": \"#1F2D0F\",\n              \"wrap\": true\n            }\n          ]\n        },\n        \"footer\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"backgroundColor\": \"#F8F7F4\",\n          \"paddingAll\": \"10px\",\n          \"contents\": [\n            {\n              \"type\": \"button\",\n              \"style\": \"primary\",\n              \"color\": \"#4A5D4E\",\n              \"height\": \"sm\",\n              \"action\": {\n                \"type\": \"uri\",\n                \"label\": \"เปิดดูนัดหมาย 📅\",\n                \"uri\": \"https://liff.line.me/2011350023-z3qS09LJ\"\n              }\n            }\n          ]\n        }\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1632, 2528],
+      "id": "af71147b-bf2b-4f29-8e81-cef40af8e6b8",
+      "name": "HTTP Request8",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "D0iVHHYJIxKvMAd3",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "a3083faa-b717-4e24-b053-ce1bc7563a50",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-1360, 2688],
+      "id": "e73b5948-5c22-45c3-b2db-3cc2c34b3e8f",
+      "name": "API_GetAppointments",
+      "webhookId": "a3083faa-b717-4e24-b053-ce1bc7563a50"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM appointments \nWHERE userId = '{{ $json.sub }}' \nORDER BY datetime ASC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [-848, 2688],
+      "id": "3b3fbb65-bd36-4eba-99df-b874c0bf9acc",
+      "name": "Query_User_Appointments",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/oauth2/v2.1/verify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "id_token",
+              "value": "={{ $json.body.id_token }}"
+            },
+            {
+              "name": "client_id",
+              "value": "2011350023"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [-1168, 2688],
+      "id": "<Hide>",
+      "name": "Verify_LINE_Token",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $input.all().map(i => i.json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [-640, 2688],
+      "id": "<Hide>",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $('Webhook').item.json.body.events[0].replyToken }}\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"🦉 ส่งรายละเอียดนัดหมายมาได้เลยครับ!\\n\\nพิมพ์บอกวัน เวลา และเรื่องที่ต้องทำได้เลย นัดดีจะบันทึกและตั้งเตือนให้อัตโนมัติครับ\\n\\n📌 ตัวอย่าง:\\n• พรุ่งนี้ 14:00 ประชุมโปรเจกต์\\n• ศุกร์หน้า 10 โมง ไปหาหมอที่ มมส.\\n• 15 ก.ย. บ่ายสอง ซ่อมคอม\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [-80, 1632],
+      "id": "b039f028-dceb-46d4-b446-f12a05b1d036",
+      "name": "send_prompt",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "D0iVHHYJIxKvMAd3",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "72fb0b75-69ec-4a82-9f8b-1f895eea30f2",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-1360, 3360],
+      "id": "a9c5aaec-a4be-4964-83c1-f90ef7f8d054",
+      "name": "API_GetStats",
+      "webhookId": "72fb0b75-69ec-4a82-9f8b-1f895eea30f2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/oauth2/v2.1/verify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "id_token",
+              "value": "={{ $json.body.id_token }}"
+            },
+            {
+              "name": "client_id",
+              "value": "<Hide>"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [-1168, 3360],
+      "id": "<Hide>",
+      "name": "Verify_LINE_Token1",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT location, event, datetime, category, status \nFROM appointments \nWHERE userId = '{{ $json.sub }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [-848, 3360],
+      "id": "<Hide>",
+      "name": "Execute a SQL query4",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [-464, 3360],
+      "id": "0c45c0a7-f28c-44ad-88f5-bbdb5fd06f5d",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst now = new Date();\nconst next7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);\n\n// กรอง Object เปล่าออก\nconst validItems = items.filter(item => {\n  const row = item.json;\n  return row && (row.event || row.datetime || row.location || row.title || row.category);\n});\n\nlet total = validItems.length;\nlet done = 0;\nlet upcoming = 0;\nlet cancelled = 0;\n\nconst categories = {};\nconst dayLabels = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];\nconst overallCounts = [0, 0, 0, 0, 0, 0, 0];\nconst weeklyCounts = [0, 0, 0, 0, 0, 0, 0];\n\nfor (const item of validItems) {\n  const row = item.json;\n  const status = (row.status || '').toLowerCase().trim();\n  const dtStr = row.datetime ? String(row.datetime).replace(' ', 'T') : null;\n  const dt = dtStr ? new Date(dtStr) : null;\n  const isValidDate = dt && !isNaN(dt.getTime());\n\n  // 1. แยกสถานะ\n  if (status === 'done') {\n    done++;\n  } else if (status === 'cancelled' || status === 'ยกเลิก' || (isValidDate && dt < now)) {\n    cancelled++;\n  } else {\n    upcoming++;\n  }\n\n  // 2. หมวดหมู่\n  const cat = row.category || 'ทั่วไป';\n  categories[cat] = (categories[cat] || 0) + 1;\n\n  // 3. นับสถิติตามวันในสัปดาห์\n  if (isValidDate) {\n    let dayIdx = dt.getDay() - 1;\n    if (dayIdx === -1) dayIdx = 6; // แปลงวันอาทิตย์ไป index 6\n    \n    // สถิติภาพรวมลูปชีวิต\n    overallCounts[dayIdx]++;\n\n    // สถิติ 7 วันข้างหน้า (นับเฉพาะงานที่ยังไม่เสร็จ/ยังไม่ยกเลิก)\n    if (dt >= now && dt <= next7Days && status !== 'done' && status !== 'cancelled' && status !== 'ยกเลิก') {\n      weeklyCounts[dayIdx]++;\n    }\n  }\n}\n\n// สร้างคำแนะนำภาพรวม\nlet overallAdvice = 'ตารางเวลาของคุณกระจายตัวได้ดีมาก ไม่มีวันไหนที่แน่นเกินไปครับ';\nif (total === 0) {\n  overallAdvice = '🦉 ตอนนี้ยังไม่มีนัดหมายในระบบ เริ่มต้นสร้างนัดแรกกับน้องนัดดีได้เลยครับ';\n} else {\n  const maxOverall = Math.max(...overallCounts);\n  if (maxOverall >= 3) {\n    const busyDay = dayLabels[overallCounts.indexOf(maxOverall)];\n    overallAdvice = `💡 <b>วัน${busyDay}</b> คือวันด่านหินของคุณ! (มีงานสะสมถึง ${maxOverall} รายการ) ควรวางแผนหรือเคลียร์งานล่วงหน้านะครับ`;\n  }\n}\n\n// สร้างคำแนะนำ 7 วันข้างหน้า\nconst maxWeekly = Math.max(...weeklyCounts);\nlet weeklyAdvice = '🎉 7 วันข้างหน้านี้ตารางของคุณโล่งมาก ไม่มีนัดหมายที่ต้องกังวลเลย!';\nif (maxWeekly > 0) {\n  const busyWeeklyDay = dayLabels[weeklyCounts.indexOf(maxWeekly)];\n  weeklyAdvice = `⚡ ใน 7 วันข้างหน้า วันที่งานแน่นที่สุดคือ <b>วัน${busyWeeklyDay}</b> (${maxWeekly} รายการ) อย่าลืมเตรียมพร้อมล่วงหน้านะครับ`;\n}\n\nreturn {\n  json: {\n    status: \"success\",\n    data: {\n      summary: { total, done, upcoming, cancelled },\n      categories,\n      traffic: {\n        labels: dayLabels,\n        overall: overallCounts,\n        weekly: weeklyCounts\n      },\n      advice: {\n        overall: overallAdvice,\n        weekly: weeklyAdvice\n      }\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-656, 3360],
+      "id": "eb11d353-8dba-4b9f-9b99-7be8fc6bad18",
+      "name": "Code in JavaScript7"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"success\": false, \"message\": \"กรุณาเข้าสู่ระบบ LINE ก่อนใช้งาน\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [-848, 3024],
+      "id": "6886974b-b081-4871-b686-fc126ec18ac7",
+      "name": "Respond to Webhook4"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"success\": false, \"message\": \"กรุณาเข้าสู่ระบบ LINE ก่อนใช้งาน\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [-848, 3552],
+      "id": "3b2934c8-d44e-400d-b0ee-1363f94c4013",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code Node (Run Once for All Items)\n// Pure Vanilla JavaScript (ไม่มี require, ไม่มี Web API, รันผ่าน V8 Sandbox 100%)\n\nfunction generateUUIDv4() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    var r = Math.random() * 16 | 0;\n    var v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nfunction parseThaiDateTime(str) {\n  if (!str) return new Date();\n  var clean = String(str).replace(' ', 'T');\n  var withZone = (clean.indexOf('+') !== -1 || clean.indexOf('Z') !== -1)\n    ? clean \n    : clean + ':00+07:00';\n  var d = new Date(withZone);\n  return isNaN(d.getTime()) ? new Date() : d;\n}\n\nreturn $input.all().map(function(item) {\n  var data = item.json || {};\n\n  var eventTitle = String(data.event || data.title || 'นัดหมายใหม่').trim();\n  var rawLocation = data.location && data.location !== '-' ? String(data.location).trim() : '';\n  var location = rawLocation || '-';\n  var category = String(data.category || 'ทั่วไป').trim();\n  var startDtStr = String(data.datetime || '').trim();\n\n  // คำนวณวันเวลา เริ่มต้น - สิ้นสุด\n  var startDate = parseThaiDateTime(startDtStr);\n  var endDate;\n  if (data.endDatetime) {\n    endDate = parseThaiDateTime(data.endDatetime);\n    if (endDate <= startDate) {\n      endDate = new Date(startDate.getTime() + (60 * 60 * 1000));\n    }\n  } else {\n    endDate = new Date(startDate.getTime() + (60 * 60 * 1000));\n  }\n\n  // สร้าง Internal Event ID\n  var eventId = data.eventId || ('natdee_' + generateUUIDv4());\n\n  // ประกอบ URL แผนที่ และ ลิงก์ดาวน์โหลด .ics (แนบ openExternalBrowser กันจอขาว)\n  var locQuery = (location !== '-') ? encodeURIComponent(location) : encodeURIComponent(eventTitle);\n  var mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + locQuery;\n  var icsDownloadUrl = 'https://natdee.21missionboss.online/webhook/calendar-ics?id=' + encodeURIComponent(eventId) + '&action=add&openExternalBrowser=1';\n\n  return {\n    json: {\n      userId: data.userId || '',\n      replyToken: data.replyToken || '',\n      event: eventTitle,\n      datetime: startDtStr,\n      endDatetime: data.endDatetime || '',\n      location: location,\n      category: category,\n      eventId: eventId,\n      mapsUrl: mapsUrl,\n      icsDownloadUrl: icsDownloadUrl\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [992, 1872],
+      "id": "63b5eb6c-517e-42c7-a276-2385adb25e44",
+      "name": "Timezone & Calendar Generator"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE appointments \nSET status = 'pending' \nWHERE eventId = '{{ $('Parse Postback Data').first().json.eventId }}' \n  AND status = 'draft';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [960, 816],
+      "id": "9ec1919a-9a27-4ea7-b554-df7b28b5c70a",
+      "name": "Confirm_Draft",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM appointments \nWHERE eventId = '{{ $('Parse Postback Data').first().json.eventId }}' \nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [1152, 816],
+      "id": "35323c03-dc1e-4ea7-ae86-46db7e118b56",
+      "name": "Get_Appt_Data",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <Hide>"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $('Webhook').first().json.body.events[0].replyToken }}\",\n  \"messages\": [\n    {\n      \"type\": \"flex\",\n      \"altText\": \"🦉 นัดดีบันทึกสำเร็จ: {{ $json.event }}\",\n      \"contents\": {\n        \"type\": \"bubble\",\n        \"size\": \"mega\",\n        \"header\": {\n          \"type\": \"box\",\n          \"layout\": \"horizontal\",\n          \"backgroundColor\": \"#28382B\",\n          \"paddingAll\": \"16px\",\n          \"alignItems\": \"center\",\n          \"contents\": [\n            {\n              \"type\": \"box\",\n              \"layout\": \"horizontal\",\n              \"spacing\": \"sm\",\n              \"flex\": 4,\n              \"alignItems\": \"center\",\n              \"contents\": [\n                { \"type\": \"text\", \"text\": \"🦉\", \"size\": \"md\", \"flex\": 0 },\n                { \"type\": \"text\", \"text\": \"นัดดีบันทึกสำเร็จ\", \"weight\": \"bold\", \"color\": \"#FFFFFF\", \"size\": \"sm\", \"flex\": 1 }\n              ]\n            },\n            {\n              \"type\": \"box\",\n              \"layout\": \"vertical\",\n              \"backgroundColor\": \"#3B4E3F\",\n              \"cornerRadius\": \"md\",\n              \"paddingStart\": \"8px\",\n              \"paddingEnd\": \"8px\",\n              \"paddingTop\": \"3px\",\n              \"paddingBottom\": \"3px\",\n              \"flex\": 0,\n              \"contents\": [\n                { \"type\": \"text\", \"text\": \"{{ $json.category || 'ทั่วไป' }}\", \"color\": \"#E2E8E3\", \"size\": \"xxs\", \"weight\": \"bold\" }\n              ]\n            }\n          ]\n        },\n        \"body\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"backgroundColor\": \"#FBFBFA\",\n          \"paddingAll\": \"20px\",\n          \"spacing\": \"lg\",\n          \"contents\": [\n            {\n              \"type\": \"text\",\n              \"text\": \"{{ $json.event }}\",\n              \"weight\": \"bold\",\n              \"size\": \"xl\",\n              \"color\": \"#1C241D\",\n              \"wrap\": true\n            },\n            {\n              \"type\": \"box\",\n              \"layout\": \"vertical\",\n              \"backgroundColor\": \"#FFFFFF\",\n              \"cornerRadius\": \"12px\",\n              \"paddingAll\": \"16px\",\n              \"spacing\": \"sm\",\n              \"borderColor\": \"#ECEAE4\",\n              \"borderWidth\": \"1px\",\n              \"contents\": [\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"horizontal\",\n                  \"spacing\": \"sm\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"📅\", \"size\": \"sm\", \"flex\": 1 },\n                    { \"type\": \"text\", \"text\": \"เวลานัด\", \"color\": \"#7E857F\", \"size\": \"xs\", \"flex\": 3 },\n                    { \"type\": \"text\", \"text\": \"{{ $json.datetime }} น.\", \"weight\": \"bold\", \"color\": \"#232A24\", \"size\": \"xs\", \"flex\": 8, \"wrap\": true }\n                  ]\n                },\n                { \"type\": \"separator\", \"color\": \"#F3F2EE\" },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"horizontal\",\n                  \"spacing\": \"sm\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"📍\", \"size\": \"sm\", \"flex\": 1 },\n                    { \"type\": \"text\", \"text\": \"สถานที่\", \"color\": \"#7E857F\", \"size\": \"xs\", \"flex\": 3 },\n                    { \"type\": \"text\", \"text\": \"{{ $json.location || '-' }}\", \"weight\": \"bold\", \"color\": \"#232A24\", \"size\": \"xs\", \"flex\": 8, \"wrap\": true }\n                  ]\n                }\n              ]\n            }\n          ]\n        },\n        \"footer\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"backgroundColor\": \"#FBFBFA\",\n          \"paddingStart\": \"20px\",\n          \"paddingEnd\": \"20px\",\n          \"paddingBottom\": \"20px\",\n          \"spacing\": \"sm\",\n          \"contents\": [\n            {\n              \"type\": \"button\",\n              \"style\": \"primary\",\n              \"height\": \"sm\",\n              \"color\": \"#28382B\",\n              \"action\": {\n                \"type\": \"uri\",\n                \"label\": \"📅 เพิ่มลงปฏิทินมือถือ (.ics)\",\n                \"uri\": \"https://natdee.21missionboss.online/webhook/calendar-ics?id={{ $json.eventId }}&action=add&openExternalBrowser=1\"\n              }\n            },\n            {\n              \"type\": \"box\",\n              \"layout\": \"horizontal\",\n              \"spacing\": \"sm\",\n              \"contents\": [\n                {\n                  \"type\": \"button\",\n                  \"style\": \"secondary\",\n                  \"height\": \"sm\",\n                  \"flex\": 1,\n                  \"color\": \"#EFECE6\",\n                  \"action\": {\n                    \"type\": \"uri\",\n                    \"label\": \"🗺️ แผนที่\",\n                    \"uri\": \"https://www.google.com/maps/search/?api=1&query={{ encodeURIComponent($json.location !== '-' ? $json.location : $json.event) }}\"\n                  }\n                },\n                {\n                  \"type\": \"button\",\n                  \"style\": \"secondary\",\n                  \"height\": \"sm\",\n                  \"flex\": 1,\n                  \"color\": \"#EFECE6\",\n                  \"action\": {\n                    \"type\": \"uri\",\n                    \"label\": \"📋 ตารางนัด\",\n                    \"uri\": \"https://liff.line.me/2011350023-z3qS09LJ\"\n                  }\n                }\n              ]\n            }\n          ]\n        }\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1648, 800],
+      "id": "6cd2f98d-3973-496a-872c-e4971f00c4ab",
+      "name": "Send_Success_Card",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "D0iVHHYJIxKvMAd3",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE appointments \nSET status = 'cancelled' \nWHERE eventId = '{{ $('Parse Postback Data').first().json.eventId }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [1168, 1216],
+      "id": "169a4f78-0711-4b09-b978-e6186fa8d733",
+      "name": "Cancel_Draft",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $('Webhook').first().json.body.events[0].replyToken }}\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"🦉 ยกเลิกการบันทึกนัดหมายเรียบร้อยแล้วครับ หากต้องการนัดใหม่ พิมพ์บอกนัดดีได้เสมอนะฮะ ✨\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1360, 1216],
+      "id": "968bc9b3-d744-4327-ada1-7b190a7cdfda",
+      "name": "Send_Cancel_Reply",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "D0iVHHYJIxKvMAd3",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b7aeea20-94a4-40d6-907c-2c4a48deff41",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "pending",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1344, 816],
+      "id": "159001c0-6a12-4479-8da0-d187d3b07820",
+      "name": "Check_Is_Pending"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <Hide>"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $('Webhook').first().json.body.events[0].replyToken }}\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"⚠️ นัดหมายนี้ถูกยกเลิกไปแล้วฮะ หากต้องการบันทึกใหม่ พิมพ์บอกนัดดีได้เลยนะ 🦉\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1648, 992],
+      "id": "4852e2d5-c199-45a8-b708-ba2a03ef7cd4",
+      "name": "Send_Already_Cancelled",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "D0iVHHYJIxKvMAd3",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $('Webhook').first().json.body.events[0].replyToken }}\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"🦉 ยินดีต้อนรับสู่ นัดดี (NatDee)!\\n\\n💡 วิธีใช้งานง่ายๆ พิมพ์บอกนัดหมายได้ทันที เช่น:\\n• 'พรุ่งนี้ 9 โมง ติวสอบที่หอสมุด'\\n• '20 ก.ย. 13:00 ประชุมสาขา ตึกคอม'\\n• 'เย็นนี้ 6 โมงครึ่ง วิ่งสวนสุขภาพ'\\n\\n📋 เมนูอื่นๆ:\\n• แตะ 'ตารางนัด' บนเมนูด้านล่างเพื่อเปิดดูในแอป\\n• พิมพ์ 'นัดต่อไป' เพื่อดูนัดหมายที่ใกล้ถึง\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [-80, 1072],
+      "id": "cd660497-9a64-4efd-9cf9-4bad5ff93a77",
+      "name": "send_help",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "D0iVHHYJIxKvMAd3",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $json.replyToken }}\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"🦉 ยินดีต้อนรับสู่ นัดดี (NatDee)!\\n\\n💡 วิธีใช้งานง่ายๆ พิมพ์บอกนัดหมายได้ทันที เช่น:\\n• 'พรุ่งนี้ 9 โมง ติวสอบตึกคอม'\\n• '20 ก.ย. 13:00 ประชุมสาขา'\\n• 'เย็นนี้ 6 โมงครึ่ง วิ่งสวนสุขภาพ'\\n\\n📋 เมนูอื่นๆ:\\n• แตะ 'ตารางนัด' บนเมนูด้านล่างเพื่อเปิดดูในแอป\\n• พิมพ์ 'นัดต่อไป' เพื่อดูนัดหมายที่ใกล้จะถึงนะฮะ ✨\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1824, 2784],
+      "id": "74bb0891-5e50-4b71-839e-07d38060cd18",
+      "name": "Send_Help_Reply",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "D0iVHHYJIxKvMAd3",
+          "name": "Header Auth account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Get LINE Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Postback Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Today Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "send_help",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "send_prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Postback Data": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute a SQL query2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Confirm_Draft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cancel_Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Update User Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Update User Reschedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Log Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query1": {
+      "main": [
+        [
+          {
+            "node": "Log Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query2": {
+      "main": [
+        [
+          {
+            "node": "Log Reschedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Create": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Reschedule": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Cancel": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Today Appointments": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get LINE Profile": {
+      "main": [
+        [
+          {
+            "node": "Upsert Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "Timezone & Calendar Generator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request6",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "view_upcoming",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request8",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request8",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request8",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send_Help_Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "view_upcoming": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LIFFLog": {
+      "main": [[]]
+    },
+    "API_GetAppointments": {
+      "main": [
+        [
+          {
+            "node": "Verify_LINE_Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify_LINE_Token": {
+      "main": [
+        [
+          {
+            "node": "Query_User_Appointments",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "LIFFLog",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query_User_Appointments": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API_GetStats": {
+      "main": [
+        [
+          {
+            "node": "Verify_LINE_Token1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify_LINE_Token1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query4": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript7": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timezone & Calendar Generator": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm_Draft": {
+      "main": [
+        [
+          {
+            "node": "Get_Appt_Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_Appt_Data": {
+      "main": [
+        [
+          {
+            "node": "Check_Is_Pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel_Draft": {
+      "main": [
+        [
+          {
+            "node": "Send_Cancel_Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check_Is_Pending": {
+      "main": [
+        [
+          {
+            "node": "Send_Success_Card",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send_Already_Cancelled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send_Success_Card": {
+      "main": [[]]
+    },
+    "HTTP Request8": {
+      "main": [[]]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "97b470ec-cc53-44ea-bc5e-d6f1f7c0ed43",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "40458374959d0e3588fc31e5acf05c6549e41a12da1495f2cd2d9ed1110617ba"
+  },
+  "nodeGroups": [],
+  "id": "n1AuEbkFVTfg7oAA",
+  "tags": []
+}
