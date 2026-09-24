@@ -1,0 +1,208 @@
+{
+  "name": "NatDee_Reminder-Push",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            },
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [-176, -32],
+      "id": "1f2005d8-43f9-40da-b5e0-7928fa69b57a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const nowTime = Date.now();\nconst results = [];\n\nfunction parseBangkokDate(dtStr) {\n  if (!dtStr) return null;\n  const parts = dtStr.trim().split(' ');\n  if (parts.length < 2) return null;\n  const datePart = parts[0];\n  const timePart = parts[1];\n  const [h, m] = timePart.split(':');\n  const padH = String(h).padStart(2, '0');\n  const padM = String(m || '00').padStart(2, '0');\n  return new Date(`${datePart}T${padH}:${padM}:00+07:00`);\n}\n\n// กำหนดเงื่อนไข Stage การแจ้งเตือน\nconst STAGES = [\n  { id: '15m', triggerMin: 15,    windowMax: 15,    name: '⚠️ ฮูกก! เตือนด่วน (อีก 15 นาที)', nextStatus: 'done',         color: '#8A3324' },\n  { id: '1h',  triggerMin: 60,    windowMax: 65,    name: '🔔 ฮูกก! เตือนล่วงหน้า 1 ชั่วโมง',  nextStatus: 'reminded_1h',  color: '#4A5D4E' },\n  { id: '1d',  triggerMin: 1440,  windowMax: 1500,  name: '📅 ฮูกก! เตือนล่วงหน้า 1 วัน',      nextStatus: 'reminded_1d',  color: '#5B6E5F' },\n  { id: '3d',  triggerMin: 4320,  windowMax: 4500,  name: '🗓️ ฮูกก! เตือนล่วงหน้า 3 วัน',      nextStatus: 'reminded_3d',  color: '#6B7E6F' },\n  { id: '1w',  triggerMin: 10080, windowMax: 10440, name: '🗓️ ฮูกก! เตือนล่วงหน้า 1 สัปดาห์',  nextStatus: 'reminded_1w',  color: '#7B8E7F' }\n];\n\nconst STATUS_LEVEL = {\n  'pending': 0,\n  'reminded_1w': 1,\n  'reminded_3d': 2,\n  'reminded_1d': 3,\n  'reminded_1h': 4,\n  'done': 5,\n  'cancelled': 99\n};\n\n// ดึงสภาพอากาศและตรวจจับกลางวัน/กลางคืน\nlet weatherSummary = null;\ntry {\n  const weatherData = $('Open-Meteo')?.first()?.json?.current;\n  if (weatherData) {\n    const temp = Math.round(weatherData.temperature_2m);\n    const code = weatherData.weather_code;\n    const isDay = weatherData.is_day === 1; // 1 = กลางวัน, 0 = กลางคืน\n    \n    let weatherText = isDay ? \"ท้องฟ้าแจ่มใส ☀️\" : \"ท้องฟ้าปลอดโปร่ง 🌙\";\n    let adviceText = isDay ? \"อากาศกำลังดี เดินทางปลอดภัยนะฮูก!\" : \"อากาศยามดึกกำลังสบาย เดินทางปลอดภัยนะฮูก!\";\n    \n    if ([1, 2, 3].includes(code)) {\n      weatherText = isDay ? \"มีเมฆเป็นส่วนมาก ⛅\" : \"มีเมฆบางส่วนยามค่ำคืน ☁️\";\n      adviceText = isDay ? \"แดดไม่แรง ลมพัดสบายๆ ครับ\" : \"ลมพัดเย็นสบายยามดึกครับ 🦉\";\n    } else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) {\n      weatherText = \"มีฝนตก 🌧️\";\n      adviceText = \"อย่าลืมพกร่มหรือเสื้อกันฝนติดตัวไปด้วยนะฮูก!\";\n    } else if ([95, 96, 99].includes(code)) {\n      weatherText = \"พายุฝนฟ้าคะนอง ⛈️\";\n      adviceText = \"ระวังฝนตกหนัก ขับขี่ระมัดระวังเป็นพิเศษนะฮูก!\";\n    }\n    weatherSummary = `${weatherText} • ${temp}°C (${adviceText})`;\n  }\n} catch (e) {\n  weatherSummary = null;\n}\n\nconst appointmentItems = $('Execute a SQL query').all();\n\nfor (const item of appointmentItems) {\n  const row = item.json;\n  const currentStatus = row.status || 'pending';\n  const currentLevel = STATUS_LEVEL[currentStatus] ?? 0;\n\n  if (currentStatus === 'done' || currentStatus === 'cancelled' || !row.datetime || !row.userId) {\n    continue;\n  }\n\n  const eventTime = parseBangkokDate(row.datetime);\n  if (!eventTime || isNaN(eventTime.getTime())) continue;\n\n  const diffMinutes = Math.round((eventTime.getTime() - nowTime) / (1000 * 60));\n\n  if (diffMinutes < -30) continue;\n\n  let matchedStage = null;\n  for (const stage of STAGES) {\n    const stageTargetLevel = STATUS_LEVEL[stage.nextStatus];\n    if (diffMinutes <= stage.windowMax && currentLevel < stageTargetLevel) {\n      matchedStage = stage;\n      break;\n    }\n  }\n\n  if (matchedStage) {\n    const locationQuery = (row.location && row.location !== '-') ? encodeURIComponent(row.location) : encodeURIComponent(row.event);\n    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${locationQuery}`;\n    const bangkokISOTime = new Date(nowTime + (7 * 60 * 60 * 1000)).toISOString().slice(0, 16);\n\n    const bodyContents = [\n      {\n        type: \"text\",\n        text: row.event || \"-\",\n        weight: \"bold\",\n        size: \"xl\",\n        color: \"#1F2D0F\",\n        wrap: true\n      },\n      {\n        type: \"separator\",\n        margin: \"md\",\n        color: \"#E5E5E5\"\n      },\n      {\n        type: \"box\",\n        layout: \"vertical\",\n        margin: \"md\",\n        spacing: \"sm\",\n        contents: [\n          {\n            type: \"box\",\n            layout: \"baseline\",\n            spacing: \"sm\",\n            contents: [\n              { type: \"text\", text: \"📅\", size: \"sm\", flex: 1 },\n              { type: \"text\", text: \"เวลานัด\", color: \"#888888\", size: \"sm\", flex: 3 },\n              { type: \"text\", text: `${row.datetime} น.`, weight: \"bold\", color: \"#333333\", size: \"sm\", flex: 8, wrap: true }\n            ]\n          },\n          {\n            type: \"box\",\n            layout: \"baseline\",\n            spacing: \"sm\",\n            contents: [\n              { type: \"text\", text: \"📍\", size: \"sm\", flex: 1 },\n              { type: \"text\", text: \"สถานที่\", color: \"#888888\", size: \"sm\", flex: 3 },\n              { type: \"text\", text: `${row.location || \"-\"}`, weight: \"bold\", color: \"#333333\", size: \"sm\", flex: 8, wrap: true }\n            ]\n          }\n        ]\n      }\n    ];\n\n    if ((matchedStage.id === '1h' || matchedStage.id === '15m') && weatherSummary) {\n      bodyContents.push({\n        type: \"box\",\n        layout: \"vertical\",\n        margin: \"md\",\n        paddingAll: \"10px\",\n        backgroundColor: \"#F3F5F2\",\n        cornerRadius: \"8px\",\n        contents: [\n          {\n            type: \"text\",\n            text: \"🌤️ สภาพอากาศขณะนี้\",\n            size: \"xs\",\n            color: \"#4A5D4E\",\n            weight: \"bold\"\n          },\n          {\n            type: \"text\",\n            text: weatherSummary,\n            size: \"xs\",\n            color: \"#555555\",\n            wrap: true,\n            margin: \"xs\"\n          }\n        ]\n      });\n    }\n\n    const flexMessage = {\n      type: \"flex\",\n      altText: `${matchedStage.name}: ${row.event}`,\n      contents: {\n        type: \"bubble\",\n        size: \"mega\",\n        header: {\n          type: \"box\",\n          layout: \"vertical\",\n          backgroundColor: matchedStage.color,\n          paddingAll: \"16px\",\n          contents: [\n            {\n              type: \"text\",\n              text: matchedStage.name,\n              weight: \"bold\",\n              color: \"#FFFFFF\",\n              size: \"sm\"\n            }\n          ]\n        },\n        body: {\n          type: \"box\",\n          layout: \"vertical\",\n          spacing: \"md\",\n          paddingAll: \"20px\",\n          contents: bodyContents\n        },\n        footer: {\n          type: \"box\",\n          layout: \"vertical\",\n          spacing: \"sm\",\n          paddingAll: \"16px\",\n          contents: [\n            {\n              type: \"button\",\n              style: \"primary\",\n              height: \"sm\",\n              color: \"#D96B27\",\n              action: {\n                type: \"uri\",\n                label: \"🗺️ เปิดแผนที่นำทาง\",\n                uri: mapsUrl\n              }\n            },\n            {\n              type: \"button\",\n              style: \"secondary\",\n              height: \"sm\",\n              action: {\n                type: \"datetimepicker\",\n                label: \"⏰ เลื่อนนัดหมาย\",\n                data: `action=reschedule&eventId=${row.eventId || ''}`,\n                mode: \"datetime\",\n                min: bangkokISOTime\n              }\n            },\n            {\n              type: \"button\",\n              style: \"secondary\",\n              height: \"sm\",\n              action: {\n                type: \"postback\",\n                label: \"❌ ยกเลิกนัดหมาย\",\n                data: `action=cancel&eventId=${row.eventId || ''}`,\n                displayText: \"ขอยกเลิกนัดหมายนี้ครับ\"\n              }\n            }\n          ]\n        }\n      }\n    };\n\n    results.push({\n      json: {\n        id: row.id,\n        userId: row.userId,\n        eventId: row.eventId,\n        event: row.event,\n        datetime: row.datetime,\n        nextStatus: matchedStage.nextStatus,\n        stageName: matchedStage.name,\n        flexMessage: flexMessage\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [416, -32],
+      "id": "e9d7a148-eb68-47f0-b149-287e6227b3ec",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer Hide"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": \"{{ $json.userId }}\",\n  \"messages\": [\n    {{ JSON.stringify($json.flexMessage) }}\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [592, -32],
+      "id": "2b433828-2f34-4d46-ada3-d722d3c65bf5",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, userId, event, DATE_FORMAT(datetime, '%Y-%m-%d %H:%i') AS datetime, location, status, eventId \nFROM appointments \nWHERE status NOT IN ('done', 'cancelled') \n  AND datetime >= NOW() - INTERVAL 1 HOUR;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [32, -32],
+      "id": "511a5f62-27dd-47a9-8c25-c387b7c4fe4c",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE appointments \nSET status = '{{ $('Code in JavaScript').item.json.nextStatus }}' \nWHERE id = {{ $('Code in JavaScript').item.json.id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [768, -32],
+      "id": "ff994ef5-631b-414c-a30f-ffbd1841c850",
+      "name": "Execute a SQL query1",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO appointment_logs (\n  appointment_id,\n  userId,\n  action,\n  new_datetime,\n  remark,\n  created_at\n)\nVALUES (\n  {{ $('Code in JavaScript').all()[$itemIndex].json.id }},\n  '{{ $('Code in JavaScript').all()[$itemIndex].json.userId }}',\n  'REMINDED',\n  '{{ $('Code in JavaScript').all()[$itemIndex].json.datetime }}',\n  '{{ $('Code in JavaScript').all()[$itemIndex].json.stageName }}',\n  NOW()\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [960, -32],
+      "id": "dced3cd3-d4ce-4623-8502-fdd19b9e789e",
+      "name": "Execute a SQL query2",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.open-meteo.com/v1/forecast?latitude=16.2485&longitude=103.2505&current=temperature_2m,weather_code,is_day&timezone=Asia%2FBangkok",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [224, 176],
+      "id": "e867d498-a53a-4749-b2b7-b858994e810e",
+      "name": "Open-Meteo"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Open-Meteo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open-Meteo": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "3d205d50-b135-4fc3-af76-2233947d9bec",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "40458374959d0e3588fc31e5acf05c6549e41a12da1495f2cd2d9ed1110617ba"
+  },
+  "nodeGroups": [],
+  "id": "7AGEDe4aspIN1xDG",
+  "tags": []
+}

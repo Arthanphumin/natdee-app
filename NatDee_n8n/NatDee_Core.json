@@ -64,7 +64,7 @@
             },
             {
               "name": "Authorization",
-              "value": "Bearer <Hide>"
+              "value": "Bearer ZIEEvtyRzV12R2PU2/iGpUwSitNqBD8t+sbD9Mot1x3UrQa7QyxYSv7ALJDeG9V+2KmiTarq3nIaYPAborZdeO/O7L+0AZyg1AJynZ9Gv6RFQ4ncURdn5gvUCFzlZEzQABe3YpdljqK8j9N465qWHQdB04t89/1O/w1cDnyilFU="
             }
           ]
         },
@@ -382,7 +382,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <Hide>"
+              "value": "Bearer ZIEEvtyRzV12R2PU2/iGpUwSitNqBD8t+sbD9Mot1x3UrQa7QyxYSv7ALJDeG9V+2KmiTarq3nIaYPAborZdeO/O7L+0AZyg1AJynZ9Gv6RFQ4ncURdn5gvUCFzlZEzQABe3YpdljqK8j9N465qWHQdB04t89/1O/w1cDnyilFU="
             },
             {
               "name": "Content-Type",
@@ -392,7 +392,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "=[\n  {\n    \"type\": \"text\",\n    \"text\": \"❌ ฮูกก! นัดดีลบนัดหมายและยกเลิกออกจากปฏิทินให้เรียบร้อยแล้วครับ 🦉🍃\"\n  }\n]",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $('Parse Postback Data').first().json.replyToken }}\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"❌ ฮูกก! นัดดีลบนัดหมายและยกเลิกออกจากปฏิทินให้เรียบร้อยแล้วครับ 🦉🍃\"\n    }\n  ]\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -410,7 +410,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <Hide>"
+              "value": "Bearer ZIEEvtyRzV12R2PU2/iGpUwSitNqBD8t+sbD9Mot1x3UrQa7QyxYSv7ALJDeG9V+2KmiTarq3nIaYPAborZdeO/O7L+0AZyg1AJynZ9Gv6RFQ4ncURdn5gvUCFzlZEzQABe3YpdljqK8j9N465qWHQdB04t89/1O/w1cDnyilFU="
             },
             {
               "name": "Content-Type",
@@ -420,7 +420,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "=[\n  {\n    \"type\": \"text\",\n    \"text\": \"⏰ ฮูกก! นัดดีขยับเวลานัดหมายให้ใหม่แล้วครับ 🦉✨\\n\\n📅 นัดใหม่: {{ $('Parse Postback Data').item.json.newDatetime }} น.\\n\\nถึงเวลาแล้วเดี๋ยวนัดดีบินมาสะกิดเตือนแน่นอนครับ 🚀\"\n  }\n]",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $('Parse Postback Data').first().json.replyToken }}\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"⏰ ฮูกก! นัดดีขยับเวลานัดหมายให้ใหม่แล้วครับ 🦉✨\\n\\n📅 นัดใหม่: {{ $('Parse Postback Data').item.json.newDatetime }} น.\\n\\nถึงเวลาแล้วเดี๋ยวนัดดีบินมาสะกิดเตือนแน่นอนครับ 🚀\"\n    }\n  ]\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -520,7 +520,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"replyToken\": \"{{ $json.replyToken }}\",\n  \"messages\": {{ JSON.stringify($json.messages) }}\n}",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $json.replyToken }}\",\n  \"messages\": [{{ JSON.stringify($json.flexMessage) }}]\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -874,7 +874,7 @@
                 "conditions": [
                   {
                     "id": "d966d803-5d67-4404-93de-600be9888bc9",
-                    "leftValue": "",
+                    "leftValue": "={{ $json.route }}",
                     "rightValue": "view_settings",
                     "operator": {
                       "type": "string",
@@ -1052,7 +1052,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <Hide>"
+              "value": "Bearer ZIEEvtyRzV12R2PU2/iGpUwSitNqBD8t+sbD9Mot1x3UrQa7QyxYSv7ALJDeG9V+2KmiTarq3nIaYPAborZdeO/O7L+0AZyg1AJynZ9Gv6RFQ4ncURdn5gvUCFzlZEzQABe3YpdljqK8j9N465qWHQdB04t89/1O/w1cDnyilFU="
             },
             {
               "name": "Content-Type",
@@ -1143,7 +1143,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [-1168, 2688],
-      "id": "<Hide>",
+      "id": "9e8c3e37-7389-41fa-8abb-adc220113da8",
       "name": "Verify_LINE_Token",
       "onError": "continueErrorOutput"
     },
@@ -1165,7 +1165,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [-640, 2688],
-      "id": "<Hide>",
+      "id": "46158c57-f214-4390-b6ef-82954019ba77",
       "name": "Respond to Webhook1"
     },
     {
@@ -1239,7 +1239,7 @@
             },
             {
               "name": "client_id",
-              "value": "<Hide>"
+              "value": "2011350023"
             }
           ]
         },
@@ -1248,7 +1248,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [-1168, 3360],
-      "id": "<Hide>",
+      "id": "65fd9f6a-10b0-4583-99fb-3b356d969915",
       "name": "Verify_LINE_Token1",
       "onError": "continueErrorOutput"
     },
@@ -1261,7 +1261,7 @@
       "type": "n8n-nodes-base.mySql",
       "typeVersion": 2.5,
       "position": [-848, 3360],
-      "id": "<Hide>",
+      "id": "9dc8c70b-5e20-4334-a092-f5f140706856",
       "name": "Execute a SQL query4",
       "credentials": {
         "mySql": {
@@ -1386,7 +1386,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <Hide>"
+              "value": "Bearer ZIEEvtyRzV12R2PU2/iGpUwSitNqBD8t+sbD9Mot1x3UrQa7QyxYSv7ALJDeG9V+2KmiTarq3nIaYPAborZdeO/O7L+0AZyg1AJynZ9Gv6RFQ4ncURdn5gvUCFzlZEzQABe3YpdljqK8j9N465qWHQdB04t89/1O/w1cDnyilFU="
             },
             {
               "name": "Content-Type",
@@ -1494,7 +1494,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer <Hide>"
+              "value": "Bearer ZIEEvtyRzV12R2PU2/iGpUwSitNqBD8t+sbD9Mot1x3UrQa7QyxYSv7ALJDeG9V+2KmiTarq3nIaYPAborZdeO/O7L+0AZyg1AJynZ9Gv6RFQ4ncURdn5gvUCFzlZEzQABe3YpdljqK8j9N465qWHQdB04t89/1O/w1cDnyilFU="
             },
             {
               "name": "Content-Type",

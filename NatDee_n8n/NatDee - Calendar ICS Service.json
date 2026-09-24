@@ -1,0 +1,120 @@
+{
+  "name": "NatDee - Calendar ICS Service",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "calendar-ics",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 0],
+      "id": "b1731c5e-1730-4f4f-96d9-dbf00b11204a",
+      "name": "Webhook",
+      "webhookId": "fc0e40f9-e01f-450e-b8f4-ce1ca38a7958"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.icsContent }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/calendar; charset=utf-8"
+              },
+              {
+                "name": "Content-Disposition",
+                "value": "=inline; filename=\"appointment.ics\""
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [608, 0],
+      "id": "8a8a98d7-64de-45c8-b484-5d5989c5043b",
+      "name": "Response กลับไปเป็นไฟล์ปฏิทิน"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first()?.json || {};\nconst queryParams = $('Webhook').first()?.json?.query || {};\nconst action = (queryParams.action || 'add').toLowerCase();\n\nconst eventTitle = String(item.event || 'นัดหมาย').trim();\nconst location = String(item.location && item.location !== '-' ? item.location : '').trim();\nconst category = String(item.category || 'ทั่วไป').trim();\nconst eventId = String(item.eventId || item.id || 'natdee_event');\n\n// 1. จัดการแยกส่วน วัน-เวลา จากฐานข้อมูล (เช่น '2026-09-20 13:00:00')\nconst rawDt = String(item.datetime || '').replace('T', ' ').trim();\nconst [datePart, timePart = '00:00'] = rawDt.split(' ');\nconst [year, month, day] = (datePart || '2026-01-01').split('-');\nconst [hour, min] = (timePart || '00:00').split(':');\n\n// ฟอร์แมตเวลาตัวเลขล้วน (YYYYMMDDTHHmmss)\nconst startDt = `${year}${month}${day}T${hour}${min}00`;\nconst endHour = String((parseInt(hour, 10) + 1) % 24).padStart(2, '0');\nconst endDt = `${year}${month}${day}T${endHour}${min}00`;\n\nconst nowUtc = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';\n\nfunction escapeIcs(text) {\n  return String(text || '')\n    .replace(/\\\\/g, '\\\\\\\\')\n    .replace(/;/g, '\\\\;')\n    .replace(/,/g, '\\\\,')\n    .replace(/\\r?\\n/g, '\\\\n');\n}\n\nconst isCancel = action === 'cancel';\nconst method = isCancel ? 'CANCEL' : 'PUBLISH';\nconst status = isCancel ? 'CANCELLED' : 'CONFIRMED';\nconst sequence = isCancel ? '1' : '0';\n\nconst descriptionText = isCancel\n  ? `❌ นัดหมายนี้ถูกยกเลิกแล้วผ่านระบบนัดดี (NatDee)\\nหมวดหมู่: ${category}`\n  : `🦉 บันทึกโดย นัดดี (NatDee)\\nหมวดหมู่: ${category}\\nสถานที่: ${location || '-'}\\n\\n📋 เช็กลิสต์การเตรียมตัว:\\n- เผื่อเวลาเดินทางล่วงหน้า\\n- ตรวจสอบสัมภาระและเอกสารที่ต้องใช้`;\n\n// 2. ประกาศ VTIMEZONE เพื่อล็อกเขตเวลา Asia/Bangkok ให้ Google Calendar / iOS รับรู้ตรงกัน\nconst icsLines = [\n  'BEGIN:VCALENDAR',\n  'VERSION:2.0',\n  'PRODID:-//NatDee Assistant//TH',\n  'CALSCALE:GREGORIAN',\n  `METHOD:${method}`,\n  'BEGIN:VTIMEZONE',\n  'TZID:Asia/Bangkok',\n  'X-LIC-LOCATION:Asia/Bangkok',\n  'BEGIN:STANDARD',\n  'TZOFFSETFROM:+0700',\n  'TZOFFSETTO:+0700',\n  'TZNAME:+07',\n  'DTSTART:19700101T000000',\n  'END:STANDARD',\n  'END:VTIMEZONE',\n  'BEGIN:VEVENT',\n  `UID:${eventId}@natdee.21missionboss.online`,\n  `DTSTAMP:${nowUtc}`,\n  `SEQUENCE:${sequence}`,\n  `STATUS:${status}`,\n  `DTSTART;TZID=Asia/Bangkok:${startDt}`,\n  `DTEND;TZID=Asia/Bangkok:${endDt}`,\n  `SUMMARY:${escapeIcs(eventTitle)}`,\n  `DESCRIPTION:${escapeIcs(descriptionText)}`,\n  `LOCATION:${escapeIcs(location)}`\n];\n\nif (!isCancel) {\n  icsLines.push(\n    'BEGIN:VALARM',\n    'ACTION:DISPLAY',\n    `DESCRIPTION:เตือนนัดหมาย: ${escapeIcs(eventTitle)} (อีก 15 นาที)`,\n    'TRIGGER:-PT15M',\n    'END:VALARM',\n    'BEGIN:VALARM',\n    'ACTION:DISPLAY',\n    `DESCRIPTION:เตือนนัดหมาย: ${escapeIcs(eventTitle)} (อีก 1 ชั่วโมง)`,\n    'TRIGGER:-PT1H',\n    'END:VALARM'\n  );\n}\n\nicsLines.push('END:VEVENT', 'END:VCALENDAR');\n\nreturn [{\n  json: {\n    icsContent: icsLines.join('\\r\\n'),\n    fileName: `appointment_${eventId}.ics`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [384, 0],
+      "id": "58a97602-3271-4695-9df5-bc46e0e173bf",
+      "name": "แปลงข้อมูลให้เป็นมาตรฐาน RFC 5545"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM appointments WHERE eventid = '{{ $json.query.id.replace(/[^a-zA-Z0-9_\\-]/g, '') }}' LIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [192, 0],
+      "id": "6bf8401e-e56a-42b0-992f-d9cd0570d568",
+      "name": "ดึงข้อมูลนัดจาก id",
+      "credentials": {
+        "mySql": {
+          "id": "2dIa8rxsuDPMtKfC",
+          "name": "MySQL account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "ดึงข้อมูลนัดจาก id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "แปลงข้อมูลให้เป็นมาตรฐาน RFC 5545": {
+      "main": [
+        [
+          {
+            "node": "Response กลับไปเป็นไฟล์ปฏิทิน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึงข้อมูลนัดจาก id": {
+      "main": [
+        [
+          {
+            "node": "แปลงข้อมูลให้เป็นมาตรฐาน RFC 5545",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "bae25c07-4a67-41f7-a759-65a104acd44d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "40458374959d0e3588fc31e5acf05c6549e41a12da1495f2cd2d9ed1110617ba"
+  },
+  "nodeGroups": [],
+  "id": "vHPmo6Wb3R1RW0kh",
+  "tags": []
+}
